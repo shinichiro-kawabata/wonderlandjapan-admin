@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>WonderlandJapan Admin</title>
     <script>
-      // 確保 process.env 存在，防止 geminiService 存取時發生 ReferenceError 導致整台掛掉
-      window.process = { env: { API_KEY: "" } };
+      // 確保 process.env 存在，並嘗試讀取系統注入的環境變數，防止分析功能報錯
+      window.process = window.process || { env: { API_KEY: "" } };
     </script>
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -43,6 +43,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <script type="module" src="index.tsx"></script>
   </body>
 </html>
