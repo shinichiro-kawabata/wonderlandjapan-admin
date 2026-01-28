@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TourRecord } from '../types';
 import { TOUR_COLORS, TOUR_ICONS } from '../constants';

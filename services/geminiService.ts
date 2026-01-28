@@ -1,10 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
-import { TourRecord } from "../types.ts";
+import { TourRecord } from "../types";
 
 export async function analyzeRecords(records: TourRecord[]) {
   if (records.length === 0) return "尚無數據可供分析。請先新增一些導覽紀錄。";
   
-  // 使用安全的方式讀取 API_KEY，防止 ReferenceError
   const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
   
   if (!apiKey) {

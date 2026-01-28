@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TourType, TourRecord, Language } from './types.ts';
-import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES } from './constants.tsx';
-import RecordCard from './components/RecordCard.tsx';
-import { analyzeRecords } from './services/geminiService.ts';
+import { TourType, TourRecord, Language } from './types';
+import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES } from './constants';
+import RecordCard from './components/RecordCard';
+import { analyzeRecords } from './services/geminiService';
 
 const ADMIN_PASSWORD = '2025';
 
