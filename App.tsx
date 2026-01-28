@@ -184,7 +184,6 @@ const App: React.FC = () => {
                </div>
              </div>
 
-             {/* 營收比例圖 */}
              <div className="bg-white p-8 rounded-[3rem] shadow-lg">
                 <h3 className="text-sm font-black font-washi mb-6 text-slate-400 uppercase tracking-widest">各類營收佔比</h3>
                 <div className="space-y-4">

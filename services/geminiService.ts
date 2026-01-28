@@ -4,11 +4,11 @@ import { TourRecord } from "../types";
 export async function analyzeRecords(records: TourRecord[]) {
   if (records.length === 0) return "尚無數據可供分析。請先新增一些導覽紀錄。";
   
-  // 安全地讀取環境變數，防止瀏覽器報錯
-  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || (window as any).process?.env?.API_KEY;
+  // 遵循規範，直接使用 process.env.API_KEY
+  const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
-    return "系統偵測不到 API KEY，請檢查 Vercel 的環境變數設定是否正確填入 API_KEY。";
+    return "系統偵測不到 API KEY，請檢查 Vercel 的環境變數設定是否正確。";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -42,9 +42,6 @@ export async function analyzeRecords(records: TourRecord[]) {
     return response.text;
   } catch (error: any) {
     console.error("Gemini analysis error:", error);
-    if (error.message?.includes("API_KEY_INVALID")) {
-      return "API Key 無效，請確認您在 Vercel 設定的金鑰是否正確。";
-    }
-    return "AI 分析暫時遇到問題，可能是流量過大或設定不完全。";
+    return "AI 分析暫時遇到問題，請確認 API Key 權限。";
   }
 }
