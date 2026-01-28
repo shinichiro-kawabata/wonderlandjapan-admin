@@ -1,14 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
-import { TourRecord } from "../types";
+import { TourRecord } from "../types.ts";
 
 export async function analyzeRecords(records: TourRecord[]) {
   if (records.length === 0) return "尚無數據可供分析。請先新增一些導覽紀錄。";
   
-  // 遵循規範，直接使用 process.env.API_KEY
-  const apiKey = process.env.API_KEY;
+  // 使用安全的方式讀取 API_KEY，防止 ReferenceError
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
   
   if (!apiKey) {
-    return "系統偵測不到 API KEY，請檢查 Vercel 的環境變數設定是否正確。";
+    return "系統偵測不到有效金鑰。如果是部署在 Vercel，請確認 Environment Variables 已設定 API_KEY。";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -42,6 +42,6 @@ export async function analyzeRecords(records: TourRecord[]) {
     return response.text;
   } catch (error: any) {
     console.error("Gemini analysis error:", error);
-    return "AI 分析暫時遇到問題，請確認 API Key 權限。";
+    return "AI 分析暫時遇到問題，請確認 API Key 權限或網路連線。";
   }
 }
