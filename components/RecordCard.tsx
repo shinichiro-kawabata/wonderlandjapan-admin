@@ -1,6 +1,6 @@
 import React from 'react';
-import { TourRecord } from '../types';
-import { TOUR_COLORS, TOUR_ICONS } from '../constants';
+import { TourRecord } from '../types.ts';
+import { TOUR_COLORS, TOUR_ICONS } from '../constants.tsx';
 
 interface RecordCardProps {
   record: TourRecord;
