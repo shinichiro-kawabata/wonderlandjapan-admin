@@ -207,7 +207,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Only Dashboard and History need password to enter
   const handleTabSwitch = (tab: typeof activeTab) => {
     if (tab === 'dashboard' || tab === 'history') {
       if (isAdmin) {
@@ -217,7 +216,6 @@ const App: React.FC = () => {
         setShowLogin(true);
       }
     } else {
-      // Upload and Settings are public
       setActiveTab(tab);
     }
   };
@@ -291,7 +289,12 @@ const App: React.FC = () => {
   const groupedHistory = useMemo(() => {
     const groups: Record<string, { totalRev: number, totalPax: number, items: TourRecord[] }> = {};
     records.forEach(r => {
-      const monthKey = r.date.substring(0, 7);
+      const d = new Date(r.date);
+      if (isNaN(d.getTime())) return;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const monthKey = `${y}-${m}`;
+      
       if (!groups[monthKey]) groups[monthKey] = { totalRev: 0, totalPax: 0, items: [] };
       groups[monthKey].totalRev += r.revenue;
       groups[monthKey].totalPax += r.guests;
@@ -434,11 +437,15 @@ const App: React.FC = () => {
                  </div>
                  {groupedHistory.map(([monthKey, group]) => {
                    const [year, month] = monthKey.split('-');
+                   const headerDisplay = lang === 'ja' 
+                    ? `${year}年 ${parseInt(month)}月` 
+                    : `${year} - ${parseInt(month)}`;
+
                    return (
                      <div key={monthKey} className="space-y-6">
                         <div className="sticky top-24 z-10 bg-slate-100/80 backdrop-blur-md px-7 py-5 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center justify-between">
                            <div>
-                              <h3 className="text-xl font-black font-washi text-slate-900">{year}年 {parseInt(month)}月</h3>
+                              <h3 className="text-xl font-black font-washi text-slate-900">{headerDisplay}</h3>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{group.items.length} {T.history}</p>
                            </div>
                            <div className="text-right">

@@ -10,6 +10,25 @@ interface RecordCardProps {
   isAdmin?: boolean;
 }
 
+const formatDate = (dateStr: string, lang: Language) => {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  
+  const weekdaysJa = ['日', '月', '火', '水', '木', '金', '土'];
+  const weekdaysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dow = d.getDay();
+  
+  if (lang === 'ja') {
+    return `${y}/${m}/${day} (${weekdaysJa[dow]})`;
+  } else {
+    return `${y}/${m}/${day} (${weekdaysEn[dow]})`;
+  }
+};
+
 const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin = false }) => {
   const T = TRANSLATIONS[lang];
   
@@ -22,11 +41,12 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin
         >
           {TOUR_ICONS[record.type]}
         </div>
-        <div>
-          <h4 className="font-black text-slate-900 text-lg tracking-tight font-washi">{T.tours[record.type]}</h4>
-          <div className="flex items-center space-x-4 mt-1.5">
-             <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">{record.date.replace(/-/g, '/')}</p>
-             <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-black text-slate-900 text-lg tracking-tight font-washi truncate">{T.tours[record.type]}</h4>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
+             <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">
+               {formatDate(record.date, lang)}
+             </p>
              <span className="text-[10px] bg-amber-100/50 text-amber-900 px-4 py-1.5 rounded-full font-black border border-amber-200/50 shadow-inner font-washi">
                {record.guide}
              </span>
@@ -41,7 +61,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin
               {record.guests} {T.guestUnit}
             </span>
             <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm uppercase">
-              {record.duration} {lang === 'ja' ? '時間' : 'Hours'}
+              {record.duration} {lang === 'ja' ? '時間' : 'h'}
             </span>
           </div>
         </div>
