@@ -12,6 +12,7 @@ export async function analyzeRecords(records: TourRecord[], lang: Language) {
     return null;
   }
 
+  // Create fresh instance per call to ensure latest key is used
   const ai = new GoogleGenAI({ apiKey });
 
   const dataSummary = records.map(r => ({
@@ -43,6 +44,7 @@ export async function analyzeRecords(records: TourRecord[], lang: Language) {
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
+    // Guidelines: .text is a getter, not a method
     return response.text;
   } catch (error: any) {
     console.error("Gemini analysis error:", error);

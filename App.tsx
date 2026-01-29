@@ -5,6 +5,47 @@ import RecordCard from './components/RecordCard';
 import { analyzeRecords } from './services/geminiService';
 
 const ADMIN_PASSWORD = '2025';
+const DELETE_PASSWORD = '0124';
+
+const GrowthChart: React.FC<{ data: { label: string; value: number }[] }> = ({ data }) => {
+  if (data.length === 0) return null;
+  const max = Math.max(...data.map(d => d.value), 1);
+  const width = 400;
+  const height = 150;
+  const padding = 20;
+  
+  const points = data.map((d, i) => {
+    const x = (i / (data.length - 1 || 1)) * (width - padding * 2) + padding;
+    const y = height - (d.value / max) * (height - padding * 2) - padding;
+    return { x, y };
+  });
+
+  const path = points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
+  const areaPath = `${path} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
+
+  return (
+    <div className="w-full h-[180px] mt-4 overflow-hidden rounded-[2rem] bg-slate-50 border border-slate-100 relative">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full preserve-3d">
+        <defs>
+          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#AF2020" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#AF2020" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={areaPath} fill="url(#areaGradient)" />
+        <path d={path} fill="none" stroke="#AF2020" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-lg" />
+        {points.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r="4" fill="white" stroke="#AF2020" strokeWidth="2" />
+        ))}
+      </svg>
+      <div className="absolute bottom-2 left-0 right-0 flex justify-between px-4">
+        {data.map((d, i) => (
+          <span key={i} className="text-[8px] font-black text-slate-400 uppercase">{d.label}</span>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const WashiSelect = ({ label, value, options, onChange }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -56,15 +97,6 @@ const App: React.FC = () => {
 
   const T = TRANSLATIONS[lang];
 
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    type: TourType.GION_WALK,
-    guide: GUIDES[0],
-    revenue: '',
-    guests: '1',
-    duration: 3
-  });
-
   useEffect(() => {
     try {
       const saved = localStorage.getItem('tour_records');
@@ -83,15 +115,50 @@ const App: React.FC = () => {
     localStorage.setItem('export_email', exportEmail);
   }, [records, exportEmail]);
 
-  const stats = useMemo(() => {
-    return records.reduce((acc, curr) => {
-      acc.totalRevenue += curr.revenue;
-      acc.totalGuests += curr.guests;
-      acc.totalHours += curr.duration;
-      acc.revenueByTour[curr.type] = (acc.revenueByTour[curr.type] || 0) + curr.revenue;
-      return acc;
-    }, { totalRevenue: 0, totalGuests: 0, totalHours: 0, revenueByTour: {} as any });
+  // Nested grouping: Year -> Quarter -> Month
+  const nestedStats = useMemo(() => {
+    const groups: any = {};
+    records.forEach(r => {
+      const date = new Date(r.date);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const quarter = Math.floor((month - 1) / 3) + 1;
+
+      if (!groups[year]) groups[year] = { rev: 0, pax: 0, quarters: {} };
+      if (!groups[year].quarters[quarter]) groups[year].quarters[quarter] = { rev: 0, pax: 0, months: {} };
+      if (!groups[year].quarters[quarter].months[month]) groups[year].quarters[quarter].months[month] = { rev: 0, pax: 0 };
+
+      groups[year].rev += r.revenue;
+      groups[year].pax += r.guests;
+      groups[year].quarters[quarter].rev += r.revenue;
+      groups[year].quarters[quarter].pax += r.guests;
+      groups[year].quarters[quarter].months[month].rev += r.revenue;
+      groups[year].quarters[quarter].months[month].pax += r.guests;
+    });
+    return groups;
   }, [records]);
+
+  // Data points for the SVG growth chart
+  const chartData = useMemo(() => {
+    const raw: { [key: string]: number } = {};
+    records.forEach(r => {
+      const monthKey = r.date.substring(0, 7); 
+      raw[monthKey] = (raw[monthKey] || 0) + r.revenue;
+    });
+    return Object.entries(raw)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([label, value]) => ({ label: label.split('-')[1], value }))
+      .slice(-6); 
+  }, [records]);
+
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    type: TourType.GION_WALK,
+    guide: GUIDES[0],
+    revenue: '',
+    guests: '1',
+    duration: 3
+  });
 
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +170,15 @@ const App: React.FC = () => {
     setRecords(prev => [newRecord, ...prev]);
     setFormData({ ...formData, revenue: '', guests: '1' });
     alert(T.saveSuccess);
+  };
+
+  const handleSafeDelete = (id: string) => {
+    const pwd = prompt(T.deletePasswordPrompt);
+    if (pwd === DELETE_PASSWORD) {
+      setRecords(prev => prev.filter(x => x.id !== id));
+    } else if (pwd !== null) {
+      alert(T.deletePasswordError);
+    }
   };
 
   const handleDownloadCSV = () => {
@@ -125,11 +201,12 @@ const App: React.FC = () => {
       ...rows.map(row => row.join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // FIX: Add UTF-8 BOM (\uFEFF) to prevent garbled characters in Excel
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `wonderland_records_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `wonderland_report_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -145,14 +222,19 @@ const App: React.FC = () => {
     const reportDate = new Date().toLocaleDateString();
     const subject = `${T.emailSubject} - ${reportDate}`;
     
+    const stats = records.reduce((acc, curr) => {
+      acc.rev += curr.revenue;
+      acc.pax += curr.guests;
+      return acc;
+    }, { rev: 0, pax: 0 });
+
     let body = `${T.emailHeader} (${reportDate})\n\n`;
-    body += `${T.emailTotalRev}: ¥${stats.totalRevenue.toLocaleString()}\n`;
-    body += `${T.emailTotalGuests}: ${stats.totalGuests} PAX\n`;
-    body += `${T.emailTotalHours}: ${stats.totalHours}\n\n`;
+    body += `${T.revenue}: ¥${stats.rev.toLocaleString()}\n`;
+    body += `${T.guests}: ${stats.pax} PAX\n\n`;
     body += `${T.emailDetail}\n`;
     
     records.forEach(r => {
-      body += `[${r.date}] ${T.tours[r.type]} | ${T.guide}: ${r.guide} | ¥${r.revenue.toLocaleString()} | ${r.guests} PAX\n`;
+      body += `[${r.date}] ${T.tours[r.type]} | ${r.guide} | ¥${r.revenue.toLocaleString()} | ${r.guests} PAX\n`;
     });
 
     const mailtoUrl = `mailto:${exportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -173,11 +255,21 @@ const App: React.FC = () => {
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === ADMIN_PASSWORD) { setIsAdmin(true); localStorage.setItem('is_admin', 'true'); setActiveTab('dashboard'); setPasswordInput(''); }
-    else alert('Passcode Error');
+    if (passwordInput === ADMIN_PASSWORD) { 
+      setIsAdmin(true); 
+      localStorage.setItem('is_admin', 'true'); 
+      setActiveTab('dashboard'); 
+      setPasswordInput(''); 
+    } else {
+      alert('Passcode Error');
+    }
   };
 
-  const handleLogout = () => { setIsAdmin(false); localStorage.removeItem('is_admin'); setActiveTab('upload'); };
+  const handleLogout = () => { 
+    setIsAdmin(false); 
+    localStorage.removeItem('is_admin'); 
+    setActiveTab('upload'); 
+  };
 
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col pb-24 relative overflow-hidden" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
@@ -231,26 +323,56 @@ const App: React.FC = () => {
               <WashiSelect label={T.guests} value={formData.guests} options={Object.fromEntries(Array.from({length: 15}, (_, i) => [String(i + 1), `${i + 1} PAX`]))} onChange={(val: string) => setFormData({...formData, guests: val})} />
             </div>
 
-            <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-[2.5rem] text-xl font-washi tracking-[0.2em] active:scale-[0.96] transition-all shadow-2xl shadow-red-900/30 flex items-center justify-center space-x-4">
+            <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-[2.5rem] text-xl font-washi active:scale-[0.96] transition-all shadow-2xl">
               <span>{T.save}</span>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7-7 7" /></svg>
             </button>
           </form>
         )}
 
         {activeTab === 'dashboard' && isAdmin && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-700">
-             <div className="grid grid-cols-2 gap-5">
-               <div className="bg-white p-7 rounded-[3rem] shadow-xl border-b-[12px] border-red-700 relative overflow-hidden">
-                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em]">{T.revenue}</p>
-                 <p className="text-2xl font-black">¥{stats.totalRevenue.toLocaleString()}</p>
-               </div>
-               <div className="bg-white p-7 rounded-[3rem] shadow-xl border-b-[12px] border-amber-500 relative overflow-hidden">
-                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em]">{T.guests}</p>
-                 <p className="text-2xl font-black">{stats.totalGuests} PAX</p>
-               </div>
+             {/* Growth Chart */}
+             <div className="bg-white p-6 rounded-[3.5rem] shadow-xl border border-slate-50">
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-4">{T.revenueTrend}</h3>
+                <GrowthChart data={chartData} />
              </div>
+
+             {/* Nested Summary */}
+             {Object.entries(nestedStats).sort((a,b) => b[0].localeCompare(a[0])).map(([year, yearData]: any) => (
+               <div key={year} className="space-y-6">
+                 {/* Year Card */}
+                 <div className="bg-slate-900 text-white p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                       <WonderlandLogo className="w-32 h-32" />
+                    </div>
+                    <p className="text-amber-400 text-[10px] font-black uppercase tracking-[0.3em] mb-1">{T.yearly}</p>
+                    <h2 className="text-4xl font-black font-washi mb-4">{year}</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div>
+                          <p className="text-[9px] text-slate-400 uppercase font-black">{T.revenue}</p>
+                          <p className="text-xl font-black">¥{yearData.rev.toLocaleString()}</p>
+                       </div>
+                       <div>
+                          <p className="text-[9px] text-slate-400 uppercase font-black">{T.guests}</p>
+                          <p className="text-xl font-black">{yearData.pax} PAX</p>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* Quarter Grid */}
+                 <div className="grid grid-cols-2 gap-5">
+                   {Object.entries(yearData.quarters).map(([q, qData]: any) => (
+                     <div key={q} className="bg-white p-6 rounded-[3rem] shadow-xl border-t-8 border-red-700 transition-all active:scale-95">
+                        <p className="text-[10px] font-black text-slate-400 uppercase mb-2">{T[`q${q}`]}</p>
+                        <p className="text-lg font-black leading-tight">¥{qData.rev.toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-slate-500 mt-1">{qData.pax} PAX</p>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             ))}
              
+             {/* AI Section */}
              <div className="bg-slate-900 text-white p-8 rounded-[3.5rem] shadow-2xl relative">
                 <h3 className="text-lg font-black font-washi mb-4 flex items-center space-x-3 text-amber-400">
                    <span>{T.aiInsights}</span>
@@ -261,14 +383,15 @@ const App: React.FC = () => {
                 <button 
                   onClick={handleAiAnalyze} 
                   disabled={isAnalyzing || records.length === 0} 
-                  className="w-full bg-red-700 text-white font-black py-4 rounded-full text-xs mt-8 active:scale-95 transition-all disabled:opacity-30 border border-red-500/30"
+                  className="w-full bg-red-700 text-white font-black py-4 rounded-full text-xs mt-8 active:scale-95 transition-all disabled:opacity-30"
                 >
                    {isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn}
                 </button>
              </div>
 
+             {/* Export Controls */}
              <div className="bg-white p-8 rounded-[3rem] shadow-xl space-y-4">
-               <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">Export Data</h3>
+               <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">Export Hub</h3>
                <input 
                  type="email" 
                  value={exportEmail} 
@@ -277,17 +400,11 @@ const App: React.FC = () => {
                  placeholder={T.emailPlaceholder}
                />
                <div className="grid grid-cols-2 gap-4">
-                 <button 
-                  onClick={handleSendEmail}
-                  className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex items-center justify-center space-x-2 active:scale-95 transition-all"
-                 >
+                 <button onClick={handleSendEmail} className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex items-center justify-center space-x-2 active:scale-95 transition-all">
                    <svg className="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                    <span className="text-[10px] font-black font-washi">{T.exportReport}</span>
                  </button>
-                 <button 
-                  onClick={handleDownloadCSV}
-                  className="bg-slate-900 text-white p-4 rounded-2xl flex items-center justify-center space-x-2 active:scale-95 transition-all"
-                 >
+                 <button onClick={handleDownloadCSV} className="bg-slate-900 text-white p-4 rounded-2xl flex items-center justify-center space-x-2 active:scale-95 transition-all">
                    <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                    <span className="text-[10px] font-black font-washi">{T.downloadCSV}</span>
                  </button>
@@ -305,10 +422,9 @@ const App: React.FC = () => {
              ) : (
                <>
                  <div className="flex justify-end space-x-3 mb-4">
-                    <button onClick={handleDownloadCSV} className="text-[10px] font-black bg-slate-900 text-white px-4 py-2 rounded-full uppercase tracking-widest shadow-lg">Download CSV</button>
-                    <button onClick={handleSendEmail} className="text-[10px] font-black bg-red-700 text-white px-4 py-2 rounded-full uppercase tracking-widest shadow-lg">Email Report</button>
+                    <button onClick={handleDownloadCSV} className="text-[10px] font-black bg-slate-900 text-white px-4 py-2 rounded-full uppercase tracking-widest shadow-lg">{T.downloadCSV}</button>
                  </div>
-                 {records.map(r => <RecordCard key={r.id} record={r} lang={lang} onDelete={(id) => { if(confirm(T.deleteConfirm)) setRecords(prev => prev.filter(x => x.id !== id)) }} />)}
+                 {records.map(r => <RecordCard key={r.id} record={r} lang={lang} onDelete={handleSafeDelete} />)}
                </>
              )}
           </div>
