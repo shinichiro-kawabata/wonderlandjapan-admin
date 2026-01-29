@@ -1,13 +1,16 @@
 import React from 'react';
-import { TourRecord } from '../types';
-import { TOUR_COLORS, TOUR_ICONS } from '../constants';
+import { TourRecord, Language } from '../types';
+import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS } from '../constants';
 
 interface RecordCardProps {
   record: TourRecord;
+  lang: Language;
   onDelete: (id: string) => void;
 }
 
-const RecordCard: React.FC<RecordCardProps> = ({ record, onDelete }) => {
+const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete }) => {
+  const T = TRANSLATIONS[lang];
+  
   return (
     <div className="bg-white/70 backdrop-blur-xl rounded-[3rem] shadow-xl border border-white/50 p-7 mb-6 flex items-center justify-between group transition-all duration-700 hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1">
       <div className="flex items-center space-x-6">
@@ -18,7 +21,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onDelete }) => {
           {TOUR_ICONS[record.type]}
         </div>
         <div>
-          <h4 className="font-black text-slate-900 text-lg tracking-tight font-washi">{record.type}</h4>
+          <h4 className="font-black text-slate-900 text-lg tracking-tight font-washi">{T.tours[record.type]}</h4>
           <div className="flex items-center space-x-4 mt-1.5">
              <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">{record.date.replace(/-/g, '/')}</p>
              <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
@@ -33,8 +36,8 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onDelete }) => {
             <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm">
               {record.guests} PAX
             </span>
-            <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm">
-              {record.duration} HOURS
+            <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm uppercase">
+              {record.duration} {lang === 'ja' ? '時間' : 'Hours'}
             </span>
           </div>
         </div>

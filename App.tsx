@@ -93,32 +93,32 @@ const App: React.FC = () => {
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.revenue && formData.type !== TourType.FREE_TOUR) {
-      alert('金額を入力してください');
+      alert(T.revenueError);
       return;
     }
     const newRecord: TourRecord = { id: crypto.randomUUID(), date: formData.date, type: formData.type, guide: formData.guide, revenue: Number(formData.revenue.replace(/,/g, '') || 0), guests: Number(formData.guests), duration: formData.duration, createdAt: Date.now() };
     setRecords(prev => [newRecord, ...prev]);
     setFormData({ ...formData, revenue: '', guests: '1' });
-    alert(lang === 'ja' ? '記録を保存しました' : 'Record saved!');
+    alert(T.saveSuccess);
   };
 
   const handleSendEmail = () => {
     if (records.length === 0) {
-      alert('無數據可發送');
+      alert(T.noRecords);
       return;
     }
 
     const reportDate = new Date().toLocaleDateString();
-    const subject = `WonderlandJapan Revenue Report - ${reportDate}`;
+    const subject = `${T.emailSubject} - ${reportDate}`;
     
-    let body = `WonderlandJapan 營運報表 (${reportDate})\n\n`;
-    body += `總營收: ¥${stats.totalRevenue.toLocaleString()}\n`;
-    body += `總客量: ${stats.totalGuests} PAX\n`;
-    body += `總時長: ${stats.totalHours} 小時\n\n`;
-    body += `--- 詳細紀錄 ---\n`;
+    let body = `${T.emailHeader} (${reportDate})\n\n`;
+    body += `${T.emailTotalRev}: ¥${stats.totalRevenue.toLocaleString()}\n`;
+    body += `${T.emailTotalGuests}: ${stats.totalGuests} PAX\n`;
+    body += `${T.emailTotalHours}: ${stats.totalHours}\n\n`;
+    body += `${T.emailDetail}\n`;
     
     records.forEach(r => {
-      body += `[${r.date}] ${r.type} | 指導: ${r.guide} | 營收: ¥${r.revenue.toLocaleString()} | 客人: ${r.guests}\n`;
+      body += `[${r.date}] ${T.tours[r.type]} | ${T.guide}: ${r.guide} | ¥${r.revenue.toLocaleString()} | ${r.guests} PAX\n`;
     });
 
     const mailtoUrl = `mailto:${COMPANY_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -128,10 +128,10 @@ const App: React.FC = () => {
   const handleAiAnalyze = async () => {
     setIsAnalyzing(true);
     try {
-      const result = await analyzeRecords(records);
+      const result = await analyzeRecords(records, lang);
       setAiInsight(result || null);
     } catch (err) {
-      setAiInsight("AI 分析暫時不可用。");
+      setAiInsight(T.aiError);
     } finally {
       setIsAnalyzing(false);
     }
@@ -154,8 +154,8 @@ const App: React.FC = () => {
                <WonderlandLogo className="w-8 h-8" />
             </div>
             <div>
-              <h1 className="text-xl font-black font-washi leading-tight tracking-tight">WONDERLAND</h1>
-              <p className="text-[8px] font-bold tracking-[0.5em] uppercase text-red-500">Japan Admin Hub</p>
+              <h1 className="text-xl font-black font-washi leading-tight tracking-tight">{T.title.toUpperCase()}</h1>
+              <p className="text-[8px] font-bold tracking-[0.5em] uppercase text-red-500">{T.subtitle} Admin Hub</p>
             </div>
           </div>
           <button onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')} className="bg-white/10 px-4 py-2 rounded-full text-[10px] font-black border border-white/20 uppercase tracking-[0.2em]">{lang}</button>
@@ -171,7 +171,7 @@ const App: React.FC = () => {
             </div>
             
             <div className="space-y-3 relative group">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 block font-washi">Service Date / 實施日期</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 block font-washi">{T.date}</label>
               <div className="relative overflow-hidden rounded-[2.5rem] border-4 border-slate-50 shadow-xl transition-all">
                 <input 
                   type="date" 
@@ -194,7 +194,7 @@ const App: React.FC = () => {
                 <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ",")})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black text-xl pl-9 shadow-inner focus:bg-white focus:border-red-500 transition-all outline-none" placeholder="0" />
                 <span className="absolute left-4 top-[2.9rem] text-slate-300 text-lg font-black">¥</span>
               </div>
-              <WashiSelect label={T.guests} value={formData.guests} options={Object.fromEntries(Array.from({length: 15}, (_, i) => [String(i + 1), `${i + 1}人`]))} onChange={(val: string) => setFormData({...formData, guests: val})} />
+              <WashiSelect label={T.guests} value={formData.guests} options={Object.fromEntries(Array.from({length: 15}, (_, i) => [String(i + 1), `${i + 1} PAX`]))} onChange={(val: string) => setFormData({...formData, guests: val})} />
             </div>
 
             <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-[2.5rem] text-xl font-washi tracking-[0.2em] active:scale-[0.96] transition-all shadow-2xl shadow-red-900/30 flex items-center justify-center space-x-4">
@@ -208,28 +208,28 @@ const App: React.FC = () => {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-700">
              <div className="grid grid-cols-2 gap-5">
                <div className="bg-white p-7 rounded-[3rem] shadow-xl border-b-[12px] border-red-700 relative overflow-hidden">
-                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em]">Revenue</p>
+                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em]">{T.revenue}</p>
                  <p className="text-2xl font-black">¥{stats.totalRevenue.toLocaleString()}</p>
                </div>
                <div className="bg-white p-7 rounded-[3rem] shadow-xl border-b-[12px] border-amber-500 relative overflow-hidden">
-                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em]">Guests</p>
+                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em]">{T.guests}</p>
                  <p className="text-2xl font-black">{stats.totalGuests} PAX</p>
                </div>
              </div>
              
              <div className="bg-slate-900 text-white p-8 rounded-[3.5rem] shadow-2xl relative">
                 <h3 className="text-lg font-black font-washi mb-4 flex items-center space-x-3 text-amber-400">
-                   <span>✦ AI Insights</span>
+                   <span>{T.aiInsights}</span>
                 </h3>
                 <div className="text-xs leading-[1.8] opacity-80 font-washi whitespace-pre-wrap min-h-[100px]">
-                  {aiInsight || '點擊下方按鈕，AI 顧問將為您解析經營現況。'}
+                  {aiInsight || T.aiPlaceholder}
                 </div>
                 <button 
                   onClick={handleAiAnalyze} 
                   disabled={isAnalyzing || records.length === 0} 
                   className="w-full bg-red-700 text-white font-black py-4 rounded-full text-xs mt-8 active:scale-95 transition-all disabled:opacity-30 border border-red-500/30"
                 >
-                   {isAnalyzing ? '分析中...' : '生成經營分析報告'}
+                   {isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn}
                 </button>
              </div>
 
@@ -238,7 +238,7 @@ const App: React.FC = () => {
               className="w-full bg-white border-4 border-slate-100 p-6 rounded-[2.5rem] flex items-center justify-center space-x-4 active:scale-95 transition-all shadow-lg"
              >
                <svg className="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-               <span className="font-black font-washi text-slate-800">發送報表至信箱</span>
+               <span className="font-black font-washi text-slate-800">{T.exportReport}</span>
              </button>
           </div>
         )}
@@ -247,14 +247,14 @@ const App: React.FC = () => {
           <div className="space-y-6 animate-in fade-in slide-in-from-left-8 duration-700">
              {records.length === 0 ? (
                <div className="py-32 text-center opacity-20">
-                 <p className="font-black tracking-[0.5em] font-washi uppercase">No Records</p>
+                 <p className="font-black tracking-[0.5em] font-washi uppercase">{T.noRecords}</p>
                </div>
              ) : (
                <>
                  <div className="flex justify-end mb-4">
-                    <button onClick={handleSendEmail} className="text-[10px] font-black bg-red-700 text-white px-6 py-3 rounded-full uppercase tracking-widest shadow-lg">Export Report</button>
+                    <button onClick={handleSendEmail} className="text-[10px] font-black bg-red-700 text-white px-6 py-3 rounded-full uppercase tracking-widest shadow-lg">{T.exportReport}</button>
                  </div>
-                 {records.map(r => <RecordCard key={r.id} record={r} onDelete={(id) => { if(confirm('刪除此紀錄？')) setRecords(prev => prev.filter(x => x.id !== id)) }} />)}
+                 {records.map(r => <RecordCard key={r.id} record={r} lang={lang} onDelete={(id) => { if(confirm(T.deleteConfirm)) setRecords(prev => prev.filter(x => x.id !== id)) }} />)}
                </>
              )}
           </div>
@@ -264,14 +264,14 @@ const App: React.FC = () => {
           <div className="bg-white p-12 rounded-[4rem] shadow-2xl text-center mt-6 border-4 border-slate-50">
             {isAdmin ? (
                <div className="py-6">
-                  <h2 className="text-2xl font-black font-washi mb-4">管理者認證成功</h2>
-                  <button onClick={handleLogout} className="w-full bg-slate-900 text-white px-10 py-5 rounded-full font-black text-xs tracking-[0.3em] uppercase">退出管理者模式</button>
+                  <h2 className="text-2xl font-black font-washi mb-4">{T.adminSuccess}</h2>
+                  <button onClick={handleLogout} className="w-full bg-slate-900 text-white px-10 py-5 rounded-full font-black text-xs tracking-[0.3em] uppercase">{T.logout}</button>
                </div>
             ) : (
               <form onSubmit={handleAdminLogin} className="space-y-12">
-                <h2 className="text-3xl font-black font-washi tracking-tighter">SECURE ACCESS</h2>
+                <h2 className="text-3xl font-black font-washi tracking-tighter uppercase">{T.adminLogin}</h2>
                 <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full p-6 bg-slate-50 rounded-[2rem] text-center text-4xl font-black focus:border-red-700 outline-none border-4 border-slate-100 tracking-[0.5em]" placeholder="••••" required />
-                <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-full text-lg font-washi shadow-2xl active:scale-95 transition-all">AUTHENTICATE</button>
+                <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-full text-lg font-washi shadow-2xl active:scale-95 transition-all">{T.unlock}</button>
               </form>
             )}
           </div>

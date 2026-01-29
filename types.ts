@@ -1,9 +1,9 @@
 export enum TourType {
-  GION_WALK = '祇園步行',
-  ARASHIYAMA_WALK = '嵐山步行',
-  KYOTO_FOOD = '京都美食導覽',
-  OSAKA_FOOD = '大阪美食導覽',
-  FREE_TOUR = '無料導覽'
+  GION_WALK = 'GION_WALK',
+  ARASHIYAMA_WALK = 'ARASHIYAMA_WALK',
+  KYOTO_FOOD = 'KYOTO_FOOD',
+  OSAKA_FOOD = 'OSAKA_FOOD',
+  FREE_TOUR = 'FREE_TOUR'
 }
 
 export type Language = 'ja' | 'en';
