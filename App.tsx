@@ -20,20 +20,20 @@ const WashiSelect = ({ label, value, options, onChange }: any) => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-2.5 ml-1 block font-washi">{label}</label>
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1 block font-washi">{label}</label>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-amber-500 focus:bg-white outline-none transition-all font-bold text-slate-900 shadow-sm flex items-center justify-between active:scale-[0.98]"
+        className="w-full p-4 bg-white border-2 border-slate-100 rounded-[1.5rem] focus:border-red-500 outline-none transition-all font-bold text-slate-900 shadow-sm flex items-center justify-between active:scale-[0.98]"
       >
         <span className="truncate font-washi">{options[value] || value}</span>
-        <svg className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+        <svg className={`w-4 h-4 text-slate-300 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
       </button>
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-100 rounded-2xl shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-100 rounded-[1.5rem] shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in duration-200">
           <div className="max-h-60 overflow-y-auto no-scrollbar">
             {Object.entries(options).map(([val, label]) => (
-              <button key={val} type="button" className={`w-full text-left px-6 py-3 text-sm font-bold font-washi transition-colors hover:bg-amber-50 ${value === val ? 'text-amber-800 bg-amber-50' : 'text-slate-700'}`} onClick={() => { onChange(val); setIsOpen(false); }}>
+              <button key={val} type="button" className={`w-full text-left px-6 py-3 text-sm font-bold font-washi transition-colors hover:bg-red-50 ${value === val ? 'text-red-700 bg-red-50' : 'text-slate-700'}`} onClick={() => { onChange(val); setIsOpen(false); }}>
                 {label as string}
               </button>
             ))}
@@ -118,171 +118,209 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col pb-24 relative overflow-hidden" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
-      <header className="p-6 pt-12 rounded-b-[3rem] shadow-xl z-20 sticky top-0" style={{ backgroundColor: NARA_COLORS.TORII_RED, color: 'white' }}>
+      <header className="p-6 pt-12 rounded-b-[2.5rem] shadow-2xl z-20 sticky top-0 bg-slate-900 text-white">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <WonderlandLogo className="w-10 h-10" />
+          <div className="flex items-center space-x-4">
+            <div className="bg-red-700 p-2 rounded-xl shadow-lg shadow-red-900/40 animate-pulse">
+               <WonderlandLogo className="w-8 h-8" />
+            </div>
             <div>
-              <h1 className="text-xl font-black font-washi leading-tight">Wonderland</h1>
-              <p className="text-[8px] font-bold tracking-[0.4em] uppercase opacity-80">Japan Admin</p>
+              <h1 className="text-xl font-black font-washi leading-tight tracking-tight">WONDERLAND</h1>
+              <p className="text-[8px] font-bold tracking-[0.5em] uppercase text-red-500">Japan Admin Hub</p>
             </div>
           </div>
-          <button onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')} className="bg-white/20 px-3 py-1.5 rounded-full text-[10px] font-black border border-white/20 uppercase tracking-widest">{lang}</button>
+          <button onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')} className="bg-white/10 px-4 py-2 rounded-full text-[10px] font-black border border-white/20 uppercase tracking-[0.2em]">{lang}</button>
         </div>
       </header>
 
-      <main className="flex-1 p-5 z-10 overflow-y-auto no-scrollbar">
+      <main className="flex-1 p-6 z-10 overflow-y-auto no-scrollbar">
         {activeTab === 'upload' && (
-          <form onSubmit={handleAddRecord} className="bg-white p-8 rounded-[3rem] shadow-xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-xl font-black font-washi mb-2" style={{ color: NARA_COLORS.DEER_BROWN }}>{T.upload}</h2>
+          <form onSubmit={handleAddRecord} className="bg-white p-8 rounded-[3rem] shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-black font-washi" style={{ color: NARA_COLORS.SUMI_BLACK }}>{T.upload}</h2>
+              <div className="h-1 w-12 bg-red-700 rounded-full"></div>
+            </div>
             
-            {/* 新設計的日期選取組件：具有 sense 的大型按鈕設計 */}
-            <div className="space-y-2 relative group">
-              <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] ml-1 block font-washi">SERVICE DATE / 實施日期</label>
-              <div className="relative">
-                <div className="w-full p-5 bg-slate-900 rounded-[2rem] border-4 border-slate-100 shadow-2xl flex items-center space-x-4 transition-all group-active:scale-[0.97]">
-                  <div className="bg-red-600 p-3 rounded-2xl shadow-lg">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* 高級感和風日期選取器 */}
+            <div className="space-y-3 relative group">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 block font-washi">Service Performance Date / 實施日期</label>
+              <div className="relative overflow-hidden rounded-[2.5rem] border-4 border-slate-50 shadow-xl transition-all group-active:scale-[0.97] group-hover:shadow-2xl">
+                <div className="w-full p-6 bg-slate-900 flex items-center space-x-6">
+                  {/* 高級圖示區 */}
+                  <div className="flex flex-col items-center justify-center bg-red-700 w-16 h-16 rounded-[1.8rem] shadow-lg shadow-red-900/50">
+                    <span className="text-[10px] text-white/70 font-black uppercase tracking-tighter mb-1">Date</span>
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Select Date</p>
-                    <p className="text-xl text-white font-black font-washi tracking-tighter">
-                      {formData.date.split('-').join(' / ')}
+                  {/* 日期文字區 */}
+                  <div className="flex-1">
+                    <p className="text-[10px] text-red-500 font-black tracking-widest uppercase mb-1">Confirming for:</p>
+                    <p className="text-2xl text-white font-black font-washi tracking-tighter">
+                      {formData.date.split('-').map((s, i) => (
+                        <span key={i} className="inline-block">
+                          {s}{i < 2 ? <span className="text-slate-700 mx-1">/</span> : ''}
+                        </span>
+                      ))}
                     </p>
                   </div>
-                  <div className="ml-auto">
-                    <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                    </svg>
+                  <div className="text-slate-600 animate-bounce-x">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M9 5l7 7-7 7" /></svg>
                   </div>
                 </div>
-                {/* 隱藏但覆蓋整個區域的 input，確保點擊任何地方都能喚醒日曆 */}
+                {/* 絕對覆蓋的透明 Native Input，確保任何地方都能點擊 */}
                 <input 
                   type="date" 
                   value={formData.date} 
                   onChange={e => setFormData({...formData, date: e.target.value})} 
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 date-input-overlay"
                   required 
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <WashiSelect label={T.guide} value={formData.guide} options={Object.fromEntries(GUIDES.map(g => [g, g]))} onChange={(val: string) => setFormData({...formData, guide: val})} />
               <WashiSelect label={T.type} value={formData.type} options={T.tours} onChange={(val: TourType) => setFormData({...formData, type: val})} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <div className="relative">
-                <label className="text-[11px] font-black text-slate-500 mb-2 block font-washi">{T.revenue}</label>
-                <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ",")})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-lg pl-8 shadow-inner" placeholder="0" />
-                <span className="absolute left-3 top-[2.7rem] text-slate-400 text-sm">¥</span>
+                <label className="text-[10px] font-black text-slate-400 mb-2.5 block font-washi uppercase tracking-[0.2em]">{T.revenue}</label>
+                <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ",")})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black text-xl pl-9 shadow-inner focus:bg-white focus:border-red-500 transition-all outline-none" placeholder="0" />
+                <span className="absolute left-4 top-[2.9rem] text-slate-300 text-lg font-black">¥</span>
               </div>
               <WashiSelect label={T.guests} value={formData.guests} options={Object.fromEntries(Array.from({length: 15}, (_, i) => [String(i + 1), `${i + 1}人`]))} onChange={(val: string) => setFormData({...formData, guests: val})} />
             </div>
 
-            <button type="submit" className="w-full bg-red-700 text-white font-black py-5 rounded-[2.5rem] text-lg font-washi tracking-widest active:scale-95 transition-all shadow-xl hover:bg-red-800 flex items-center justify-center space-x-3">
+            <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-[2.5rem] text-xl font-washi tracking-[0.2em] active:scale-[0.96] transition-all shadow-2xl shadow-red-900/30 flex items-center justify-center space-x-4">
               <span>{T.save}</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7-7 7" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7-7 7" /></svg>
             </button>
           </form>
         )}
 
         {activeTab === 'dashboard' && isAdmin && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-             <div className="grid grid-cols-2 gap-4">
-               <div className="bg-white p-6 rounded-[2.5rem] shadow-lg border-b-8 border-red-600">
-                 <p className="text-slate-400 text-[9px] font-black mb-1 uppercase tracking-tighter">總營收</p>
-                 <p className="text-xl font-black">¥{stats.totalRevenue.toLocaleString()}</p>
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-700">
+             <div className="grid grid-cols-2 gap-5">
+               <div className="bg-white p-7 rounded-[3rem] shadow-xl border-b-[12px] border-red-700 relative overflow-hidden">
+                 <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-red-50 rounded-full opacity-50"></div>
+                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em] relative z-10">Total Revenue</p>
+                 <p className="text-2xl font-black relative z-10">¥{stats.totalRevenue.toLocaleString()}</p>
                </div>
-               <div className="bg-white p-6 rounded-[2.5rem] shadow-lg border-b-8 border-amber-500">
-                 <p className="text-slate-400 text-[9px] font-black mb-1 uppercase tracking-tighter">總客數</p>
-                 <p className="text-xl font-black">{stats.totalGuests} PAX</p>
+               <div className="bg-white p-7 rounded-[3rem] shadow-xl border-b-[12px] border-amber-500 relative overflow-hidden">
+                 <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-amber-50 rounded-full opacity-50"></div>
+                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em] relative z-10">Total Guests</p>
+                 <p className="text-2xl font-black relative z-10">{stats.totalGuests} PAX</p>
                </div>
              </div>
-             <div className="bg-white p-8 rounded-[3rem] shadow-lg">
-                <h3 className="text-sm font-black font-washi mb-6 text-slate-400 uppercase tracking-widest">各類營收佔比</h3>
-                <div className="space-y-4">
+             
+             <div className="bg-slate-900 text-white p-8 rounded-[3.5rem] shadow-2xl relative">
+                <div className="absolute top-6 right-8">
+                  <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                    <span className="text-amber-400 text-xl font-black">✦</span>
+                  </div>
+                </div>
+                <h3 className="text-lg font-black font-washi mb-6 flex items-center space-x-3">
+                   <span>AI 數據營運分析</span>
+                </h3>
+                <div className="text-xs leading-[1.8] opacity-80 font-washi whitespace-pre-wrap min-h-[120px]">
+                  {aiInsight || '點擊下方按鈕，AI 經營顧問將為您解析目前的營收與客源分佈情形。'}
+                </div>
+                <button 
+                  onClick={handleAiAnalyze} 
+                  disabled={isAnalyzing || records.length === 0} 
+                  className="w-full bg-red-700 text-white font-black py-4 rounded-full text-xs mt-8 active:scale-95 transition-all disabled:opacity-30 shadow-xl shadow-black/40 border border-red-500/30"
+                >
+                   {isAnalyzing ? '分析中...' : '生成智能經營報告'}
+                </button>
+             </div>
+
+             <div className="bg-white p-8 rounded-[3rem] shadow-xl">
+                <h3 className="text-[10px] font-black text-slate-400 mb-8 uppercase tracking-[0.3em] text-center">Revenue Distribution / 營收分佈</h3>
+                <div className="space-y-6">
                    {Object.entries(stats.revenueByTour).map(([type, rev]: [any, any]) => (
                      rev > 0 && (
-                       <div key={type} className="space-y-1">
-                          <div className="flex justify-between text-[11px] font-bold">
-                             <span>{type}</span>
-                             <span>¥{rev.toLocaleString()}</span>
+                       <div key={type} className="space-y-2">
+                          <div className="flex justify-between text-xs font-black px-1">
+                             <span className="text-slate-700 font-washi">{type}</span>
+                             <span className="text-slate-900">¥{rev.toLocaleString()}</span>
                           </div>
-                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                             <div className="h-full transition-all duration-1000" style={{ width: `${(rev / (stats.totalRevenue || 1)) * 100}%`, backgroundColor: TOUR_COLORS[type as TourType] }}></div>
+                          <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5">
+                             <div className="h-full rounded-full transition-all duration-1000 shadow-inner" style={{ width: `${(rev / (stats.totalRevenue || 1)) * 100}%`, backgroundColor: TOUR_COLORS[type as TourType] }}></div>
                           </div>
                        </div>
                      )
                    ))}
                 </div>
              </div>
-             <div className="bg-slate-900 text-white p-8 rounded-[3rem] shadow-2xl">
-                <h3 className="text-sm font-black font-washi mb-4 flex items-center">
-                   <span className="text-amber-400 mr-2">✦</span> AI 經營策略洞察
-                </h3>
-                <div className="text-xs leading-relaxed opacity-90 font-washi whitespace-pre-wrap min-h-[100px]">{aiInsight || '點擊下方按鈕，AI 將為您分析數據並提供建議'}</div>
-                <button onClick={handleAiAnalyze} disabled={isAnalyzing || records.length === 0} className="w-full bg-white text-slate-900 font-black py-4 rounded-full text-xs mt-6 active:scale-95 transition-all disabled:opacity-30 shadow-lg">
-                   {isAnalyzing ? '分析中...' : '生成 AI 報告'}
-                </button>
-             </div>
           </div>
         )}
 
         {activeTab === 'history' && isAdmin && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-500">
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-8 duration-700">
              {records.length === 0 ? (
-               <div className="py-20 text-center opacity-20 font-black tracking-widest font-washi">NO RECORDS</div>
+               <div className="py-32 text-center opacity-20">
+                 <div className="w-24 h-24 border-4 border-slate-900 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                 </div>
+                 <p className="font-black tracking-[0.5em] font-washi">NO RECORDS FOUND</p>
+               </div>
              ) : (
-               records.map(r => <RecordCard key={r.id} record={r} onDelete={(id) => setRecords(prev => prev.filter(x => x.id !== id))} />)
+               records.map(r => <RecordCard key={r.id} record={r} onDelete={(id) => { if(confirm('刪除此紀錄？')) setRecords(prev => prev.filter(x => x.id !== id)) }} />)
              )}
           </div>
         )}
 
         {(activeTab === 'admin' || (!isAdmin && (activeTab === 'dashboard' || activeTab === 'history'))) && (
-          <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center mt-6">
+          <div className="bg-white p-12 rounded-[4rem] shadow-2xl text-center mt-6 border-4 border-slate-50">
             {isAdmin ? (
-               <div className="py-10">
-                  <div className="bg-green-50 text-green-600 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 shadow-inner">
-                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+               <div className="py-6">
+                  <div className="bg-green-50 text-green-600 p-6 rounded-[2.5rem] w-24 h-24 flex items-center justify-center mx-auto mb-8 shadow-inner border-2 border-green-100">
+                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
                   </div>
-                  <h2 className="text-xl font-black font-washi mb-8">管理者身分已驗證</h2>
-                  <button onClick={handleLogout} className="bg-slate-100 px-10 py-4 rounded-full font-black text-[10px] tracking-widest uppercase border border-slate-200 hover:bg-slate-200 transition-colors">Logout / 登出</button>
+                  <h2 className="text-2xl font-black font-washi mb-4">管理者身分已認證</h2>
+                  <p className="text-xs text-slate-400 font-bold mb-10 uppercase tracking-widest">Administrator Authenticated</p>
+                  <button onClick={handleLogout} className="w-full bg-slate-900 text-white px-10 py-5 rounded-full font-black text-xs tracking-[0.3em] uppercase shadow-xl active:scale-95 transition-all">EXIT ADMIN MODE</button>
                </div>
             ) : (
-              <form onSubmit={handleAdminLogin} className="space-y-10 py-4">
-                <div className="bg-slate-50 p-6 rounded-full w-24 h-24 flex items-center justify-center mx-auto shadow-inner border-4 border-white">
-                  <svg className="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              <form onSubmit={handleAdminLogin} className="space-y-12">
+                <div className="bg-slate-50 p-8 rounded-[3rem] w-28 h-28 flex items-center justify-center mx-auto shadow-inner border-4 border-white rotate-3">
+                  <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-black font-washi">Manager Access</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Enter Secure Passcode</p>
+                <div className="space-y-3">
+                  <h2 className="text-3xl font-black font-washi tracking-tighter">SECURE ACCESS</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.4em]">Restricted Manager Area</p>
                 </div>
-                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full p-6 bg-slate-50 rounded-3xl text-center text-4xl font-black focus:border-red-600 outline-none border-4 border-slate-100 transition-all" placeholder="••••" required />
-                <button type="submit" className="w-full bg-slate-900 text-white font-black py-6 rounded-full text-lg font-washi shadow-xl active:scale-95 transition-all">UNLOCK SYSTEM</button>
+                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full p-6 bg-slate-50 rounded-[2rem] text-center text-4xl font-black focus:border-red-700 outline-none border-4 border-slate-100 transition-all tracking-[0.5em]" placeholder="••••" required />
+                <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-full text-lg font-washi shadow-2xl shadow-red-900/40 active:scale-95 transition-all">AUTHENTICATE</button>
               </form>
             )}
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-6 left-6 right-6 h-20 glass px-10 flex justify-between items-center rounded-full shadow-2xl z-50 border border-white/50">
-        <button onClick={() => setActiveTab('upload')} className={`transition-all duration-300 ${activeTab === 'upload' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
+      <nav className="fixed bottom-8 left-8 right-8 h-24 glass px-12 flex justify-between items-center rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 border border-white/60">
+        <button onClick={() => setActiveTab('upload')} className={`transition-all duration-500 ${activeTab === 'upload' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
         </button>
-        <button onClick={() => setActiveTab('dashboard')} className={`transition-all duration-300 ${activeTab === 'dashboard' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" /></svg>
+        <button onClick={() => setActiveTab('dashboard')} className={`transition-all duration-500 ${activeTab === 'dashboard' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" /></svg>
         </button>
-        <button onClick={() => setActiveTab('history')} className={`transition-all duration-300 ${activeTab === 'history' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <button onClick={() => setActiveTab('history')} className={`transition-all duration-500 ${activeTab === 'history' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </button>
-        <button onClick={() => setActiveTab('admin')} className={`transition-all duration-300 ${activeTab === 'admin' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+        <button onClick={() => setActiveTab('admin')} className={`transition-all duration-500 ${activeTab === 'admin' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
         </button>
       </nav>
+      <style>{`
+        @keyframes bounce-x {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(5px); }
+        }
+        .animate-bounce-x { animation: bounce-x 1.5s ease-in-out infinite; }
+      `}</style>
     </div>
   );
 };

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>WonderlandJapan Admin</title>
     <script>
-      // 確保全域 process 物件存在，防止 geminiService 在解析時報補
+      // 確保全域 process 物件存在，防止應用程式初始化時報錯
       window.process = { env: { API_KEY: "" } };
     </script>
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
@@ -27,6 +27,14 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
       }
+      /* 讓原生日期選取器覆蓋但透明，確保點擊範圍最大化 */
+      .date-input-overlay::-webkit-calendar-picker-indicator {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100%; height: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
     </style>
     <script type="importmap">
 {
@@ -43,10 +51,12 @@
   </head>
   <body>
     <div id="root">
-      <div style="display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif; color:#AF2020; font-weight:bold;">
-        Loading Wonderland Admin...
+      <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:sans-serif; background-color:#FDFCF0;">
+        <div style="width:40px; height:40px; border:4px solid #AF2020; border-top:4px solid transparent; border-radius:50%; animation:spin 1s linear infinite;"></div>
+        <p style="margin-top:20px; color:#AF2020; font-weight:900; letter-spacing:0.2em;">Wonderland Admin Loading...</p>
       </div>
     </div>
+    <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
     <script type="module" src="index.tsx"></script>
   </body>
 </html>
