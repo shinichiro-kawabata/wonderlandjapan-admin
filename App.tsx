@@ -115,7 +115,6 @@ const App: React.FC = () => {
     localStorage.setItem('export_email', exportEmail);
   }, [records, exportEmail]);
 
-  // Nested grouping: Year -> Quarter -> Month
   const nestedStats = useMemo(() => {
     const groups: any = {};
     records.forEach(r => {
@@ -138,7 +137,6 @@ const App: React.FC = () => {
     return groups;
   }, [records]);
 
-  // Data points for the SVG growth chart
   const chartData = useMemo(() => {
     const raw: { [key: string]: number } = {};
     records.forEach(r => {
@@ -168,7 +166,7 @@ const App: React.FC = () => {
     }
     const newRecord: TourRecord = { id: crypto.randomUUID(), date: formData.date, type: formData.type, guide: formData.guide, revenue: Number(formData.revenue.replace(/,/g, '') || 0), guests: Number(formData.guests), duration: formData.duration, createdAt: Date.now() };
     setRecords(prev => [newRecord, ...prev]);
-    setFormData({ ...formData, revenue: '', guests: '1' });
+    setFormData({ ...formData, revenue: '', guests: '1', duration: 3 });
     alert(T.saveSuccess);
   };
 
@@ -196,12 +194,13 @@ const App: React.FC = () => {
       r.duration
     ]);
     
+    // Create CSV content with commas
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(','))
     ].join('\n');
 
-    // FIX: Add UTF-8 BOM (\uFEFF) to prevent garbled characters in Excel
+    // FIX: Add UTF-8 BOM (\uFEFF) to ensure Japanese characters are correctly displayed in Excel
     const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -220,7 +219,7 @@ const App: React.FC = () => {
     }
 
     const reportDate = new Date().toLocaleDateString();
-    const subject = `${T.emailSubject} - ${reportDate}`;
+    const subject = `Wonderland Report - ${reportDate}`;
     
     const stats = records.reduce((acc, curr) => {
       acc.rev += curr.revenue;
@@ -228,10 +227,9 @@ const App: React.FC = () => {
       return acc;
     }, { rev: 0, pax: 0 });
 
-    let body = `${T.emailHeader} (${reportDate})\n\n`;
+    let body = `Wonderland Report (${reportDate})\n\n`;
     body += `${T.revenue}: ¥${stats.rev.toLocaleString()}\n`;
     body += `${T.guests}: ${stats.pax} PAX\n\n`;
-    body += `${T.emailDetail}\n`;
     
     records.forEach(r => {
       body += `[${r.date}] ${T.tours[r.type]} | ${r.guide} | ¥${r.revenue.toLocaleString()} | ${r.guests} PAX\n`;
@@ -314,6 +312,27 @@ const App: React.FC = () => {
               <WashiSelect label={T.type} value={formData.type} options={T.tours} onChange={(val: TourType) => setFormData({...formData, type: val})} />
             </div>
 
+            {/* Duration selection buttons as requested */}
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 block font-washi">{T.duration}</label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, duration: 2 })}
+                  className={`py-4 rounded-2xl font-black text-lg transition-all border-2 ${formData.duration === 2 ? 'bg-red-700 text-white border-red-700 shadow-lg' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+                >
+                  2 {lang === 'ja' ? '時間' : 'Hours'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, duration: 3 })}
+                  className={`py-4 rounded-2xl font-black text-lg transition-all border-2 ${formData.duration === 3 ? 'bg-red-700 text-white border-red-700 shadow-lg' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+                >
+                  3 {lang === 'ja' ? '時間' : 'Hours'}
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-5">
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 mb-2.5 block font-washi uppercase tracking-[0.2em]">{T.revenue}</label>
@@ -323,24 +342,22 @@ const App: React.FC = () => {
               <WashiSelect label={T.guests} value={formData.guests} options={Object.fromEntries(Array.from({length: 15}, (_, i) => [String(i + 1), `${i + 1} PAX`]))} onChange={(val: string) => setFormData({...formData, guests: val})} />
             </div>
 
-            <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-[2.5rem] text-xl font-washi active:scale-[0.96] transition-all shadow-2xl">
+            <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-[2.5rem] text-xl font-washi active:scale-[0.96] transition-all shadow-2xl flex items-center justify-center space-x-3">
               <span>{T.save}</span>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7"/></svg>
             </button>
           </form>
         )}
 
         {activeTab === 'dashboard' && isAdmin && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-700">
-             {/* Growth Chart */}
              <div className="bg-white p-6 rounded-[3.5rem] shadow-xl border border-slate-50">
                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-4">{T.revenueTrend}</h3>
                 <GrowthChart data={chartData} />
              </div>
 
-             {/* Nested Summary */}
              {Object.entries(nestedStats).sort((a,b) => b[0].localeCompare(a[0])).map(([year, yearData]: any) => (
                <div key={year} className="space-y-6">
-                 {/* Year Card */}
                  <div className="bg-slate-900 text-white p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-10">
                        <WonderlandLogo className="w-32 h-32" />
@@ -359,7 +376,6 @@ const App: React.FC = () => {
                     </div>
                  </div>
 
-                 {/* Quarter Grid */}
                  <div className="grid grid-cols-2 gap-5">
                    {Object.entries(yearData.quarters).map(([q, qData]: any) => (
                      <div key={q} className="bg-white p-6 rounded-[3rem] shadow-xl border-t-8 border-red-700 transition-all active:scale-95">
@@ -372,7 +388,6 @@ const App: React.FC = () => {
                </div>
              ))}
              
-             {/* AI Section */}
              <div className="bg-slate-900 text-white p-8 rounded-[3.5rem] shadow-2xl relative">
                 <h3 className="text-lg font-black font-washi mb-4 flex items-center space-x-3 text-amber-400">
                    <span>{T.aiInsights}</span>
@@ -389,7 +404,6 @@ const App: React.FC = () => {
                 </button>
              </div>
 
-             {/* Export Controls */}
              <div className="bg-white p-8 rounded-[3rem] shadow-xl space-y-4">
                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">Export Hub</h3>
                <input 
