@@ -1,13 +1,5 @@
 {
-  "headers": [
-    {
-      "source": "/(.*).(ts|tsx)",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        }
-      ]
-    }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
