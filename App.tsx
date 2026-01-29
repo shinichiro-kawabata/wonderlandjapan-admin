@@ -5,79 +5,45 @@ import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUI
 import RecordCard from './components/RecordCard';
 import { analyzeRecords } from './services/geminiService';
 
+const ADMIN_PASSWORD = '2025';
 const DELETE_PASSWORD = '0124';
 
 const GrowthChart: React.FC<{ data: { label: string; value: number }[] }> = ({ data }) => {
-  if (data.length === 0) return (
-    <div className="w-full h-[180px] flex items-center justify-center text-slate-300 font-black uppercase tracking-widest text-[10px]">
-      No Data Available
-    </div>
-  );
-
+  if (data.length === 0) return null;
   const max = Math.max(...data.map(d => d.value), 1);
   const width = 400;
-  const height = 180;
-  const paddingX = 40;
-  const paddingY = 40;
+  const height = 150;
+  const padding = 20;
   
   const points = data.map((d, i) => {
-    const x = (i / (data.length - 1 || 1)) * (width - paddingX * 2) + paddingX;
-    const y = height - (d.value / max) * (height - paddingY * 2) - paddingY;
-    return { x, y, value: d.value, label: d.label };
+    const x = (i / (data.length - 1 || 1)) * (width - padding * 2) + padding;
+    const y = height - (d.value / max) * (height - padding * 2) - padding;
+    return { x, y };
   });
 
   const path = points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
-  const areaPath = `${path} L ${points[points.length - 1].x} ${height - 20} L ${points[0].x} ${height - 20} Z`;
+  const areaPath = `${path} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
 
   return (
-    <div className="w-full mt-4 overflow-hidden rounded-[2.5rem] bg-white border border-slate-100 relative shadow-inner">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+    <div className="w-full h-[180px] mt-4 overflow-hidden rounded-[2rem] bg-slate-50 border border-slate-100 relative">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full preserve-3d">
         <defs>
           <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#AF2020" stopOpacity="0.15" />
+            <stop offset="0%" stopColor="#AF2020" stopOpacity="0.2" />
             <stop offset="100%" stopColor="#AF2020" stopOpacity="0" />
           </linearGradient>
         </defs>
-        
-        {/* 背景參考線 */}
-        <line x1={paddingX} y1={paddingY} x2={width - paddingX} y2={paddingY} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-        <line x1={paddingX} y1={height/2} x2={width - paddingX} y2={height/2} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-        <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="#f1f5f9" strokeWidth="2" />
-
-        {/* 漸層區域 */}
         <path d={areaPath} fill="url(#areaGradient)" />
-        
-        {/* 主曲線 */}
-        <path d={path} fill="none" stroke="#AF2020" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-        
-        {/* 數據點與數值標註 */}
+        <path d={path} fill="none" stroke="#AF2020" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-lg" />
         {points.map((p, i) => (
-          <g key={i}>
-            <circle cx={p.x} cy={p.y} r="5" fill="white" stroke="#AF2020" strokeWidth="3" className="drop-shadow-sm" />
-            
-            {/* 數值文字 (¥) */}
-            <text 
-              x={p.x} 
-              y={p.y - 12} 
-              textAnchor="middle" 
-              className="fill-slate-900 font-black text-[10px]"
-              style={{ fontFamily: 'Inter, sans-serif' }}
-            >
-              ¥{(p.value / 1000).toFixed(0)}k
-            </text>
-            
-            {/* 月份標籤 */}
-            <text 
-              x={p.x} 
-              y={height - 10} 
-              textAnchor="middle" 
-              className="fill-slate-400 font-black text-[9px] uppercase tracking-tighter"
-            >
-              {p.label}M
-            </text>
-          </g>
+          <circle key={i} cx={p.x} cy={p.y} r="4" fill="white" stroke="#AF2020" strokeWidth="2" />
         ))}
       </svg>
+      <div className="absolute bottom-2 left-0 right-0 flex justify-between px-4">
+        {data.map((d, i) => (
+          <span key={i} className="text-[8px] font-black text-slate-400 uppercase">{d.label}</span>
+        ))}
+      </div>
     </div>
   );
 };
@@ -122,8 +88,10 @@ const WashiSelect = ({ label, value, options, onChange }: any) => {
 
 const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('ja');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [records, setRecords] = useState<TourRecord[]>([]);
   const [activeTab, setActiveTab] = useState<'upload' | 'dashboard' | 'history' | 'admin'>('upload');
+  const [passwordInput, setPasswordInput] = useState('');
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
@@ -131,25 +99,21 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [autoSync, setAutoSync] = useState(false);
-  
-  const initialized = useRef(false);
+
   const T = TRANSLATIONS[lang];
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('tour_records');
       if (saved) setRecords(JSON.parse(saved));
+      const savedAdmin = localStorage.getItem('is_admin');
+      if (savedAdmin === 'true') setIsAdmin(true);
       const savedUrl = localStorage.getItem('cloud_sync_url');
       if (savedUrl) setCloudUrl(savedUrl);
       const savedAuto = localStorage.getItem('auto_sync');
       if (savedAuto) setAutoSync(savedAuto === 'true');
       const savedLast = localStorage.getItem('last_sync_time');
       if (savedLast) setLastSyncTime(savedLast);
-      
-      if (savedUrl && !initialized.current) {
-        initialized.current = true;
-        setTimeout(() => performCloudSync(false), 1000); 
-      }
     } catch (e) {
       console.error("Storage load failed", e);
     }
@@ -170,13 +134,14 @@ const App: React.FC = () => {
     });
   };
 
-  const performCloudSync = async (showAlert = true) => {
+  const performCloudSync = async () => {
     if (!cloudUrl || !cloudUrl.startsWith('https://script.google.com')) {
-      if (showAlert) alert(T.syncError);
+      alert(T.syncError);
       return;
     }
     setIsSyncing(true);
     try {
+      // POST data to sync UP
       await fetch(cloudUrl, {
         method: 'POST',
         mode: 'no-cors',
@@ -184,17 +149,17 @@ const App: React.FC = () => {
         body: JSON.stringify({ action: 'sync', data: records })
       });
 
+      // GET data to sync DOWN
       const getResponse = await fetch(`${cloudUrl}?action=get`);
       const cloudData = await getResponse.json();
       if (Array.isArray(cloudData)) {
         mergeRecords(cloudData);
-        const now = new Date().toLocaleString('ja-JP');
-        setLastSyncTime(now);
-        if (showAlert) alert(T.syncSuccess);
+        setLastSyncTime(new Date().toLocaleString('ja-JP'));
+        alert(T.syncSuccess);
       }
     } catch (err) {
       console.error("Sync Error:", err);
-      if (showAlert) alert(T.syncError);
+      alert(T.syncError);
     } finally {
       setIsSyncing(false);
     }
@@ -222,7 +187,7 @@ const App: React.FC = () => {
     alert(T.saveSuccess);
     
     if (autoSync && cloudUrl) {
-      performCloudSync(false);
+      performCloudSync();
     }
   };
 
@@ -246,18 +211,6 @@ const App: React.FC = () => {
       groups[year].quarters[quarter].months[month].pax += r.guests;
     });
     return groups;
-  }, [records]);
-
-  const groupedHistory = useMemo(() => {
-    const groups: Record<string, { totalRev: number, totalPax: number, items: TourRecord[] }> = {};
-    records.forEach(r => {
-      const monthKey = r.date.substring(0, 7); // YYYY-MM
-      if (!groups[monthKey]) groups[monthKey] = { totalRev: 0, totalPax: 0, items: [] };
-      groups[monthKey].totalRev += r.revenue;
-      groups[monthKey].totalPax += r.guests;
-      groups[monthKey].items.push(r);
-    });
-    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [records]);
 
   const chartData = useMemo(() => {
@@ -309,6 +262,24 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === ADMIN_PASSWORD) { 
+      setIsAdmin(true); 
+      localStorage.setItem('is_admin', 'true'); 
+      // Stay on Admin tab to configure settings
+      setPasswordInput(''); 
+    } else {
+      alert('Passcode Error');
+    }
+  };
+
+  const handleLogout = () => { 
+    setIsAdmin(false); 
+    localStorage.removeItem('is_admin'); 
+    setActiveTab('upload'); 
+  };
+
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col pb-32 relative overflow-hidden" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
       <header className="p-6 pt-12 rounded-b-[2.5rem] shadow-2xl z-20 sticky top-0 bg-slate-900 text-white">
@@ -319,7 +290,7 @@ const App: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-black font-washi leading-tight tracking-tight">{T.title.toUpperCase()}</h1>
-              <p className="text-[8px] font-bold tracking-[0.5em] uppercase text-red-500">{T.subtitle} Hub {isSyncing ? '...' : ''}</p>
+              <p className="text-[8px] font-bold tracking-[0.5em] uppercase text-red-500">{T.subtitle} Hub</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -373,17 +344,16 @@ const App: React.FC = () => {
 
             <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-[2.5rem] text-xl font-washi active:scale-[0.96] transition-all shadow-2xl flex items-center justify-center space-x-3">
               <span>{T.save}</span>
-              {isSyncing ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7"/></svg>}
+              <svg className={`w-6 h-6 ${isSyncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7"/></svg>
             </button>
           </form>
         )}
 
-        {activeTab === 'dashboard' && (
+        {activeTab === 'dashboard' && isAdmin && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-700">
              <div className="bg-white p-6 rounded-[3.5rem] shadow-xl border border-slate-50">
                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-4">{T.revenueTrend}</h3>
                 <GrowthChart data={chartData} />
-                <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest text-center mt-4">* values in thousands (k)</p>
              </div>
 
              {Object.entries(nestedStats).sort((a,b) => b[0].localeCompare(a[0])).map(([year, yearData]: any) => (
@@ -419,39 +389,16 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'history' && (
-          <div className="space-y-12 animate-in fade-in slide-in-from-left-8 duration-700">
+        {activeTab === 'history' && isAdmin && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-8 duration-700">
              {records.length === 0 ? (
                <div className="py-32 text-center opacity-20"><p className="font-black tracking-[0.5em] font-washi uppercase">{T.noRecords}</p></div>
              ) : (
                <>
-                 <div className="flex justify-between items-center px-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{records.length} {T.history}</p>
-                    <button onClick={handleDownloadCSV} className="text-[10px] font-black bg-slate-900 text-white px-4 py-2 rounded-full uppercase tracking-widest shadow-lg active:scale-95 transition-all">{T.downloadCSV}</button>
+                 <div className="flex justify-end space-x-3 mb-4">
+                    <button onClick={handleDownloadCSV} className="text-[10px] font-black bg-slate-900 text-white px-4 py-2 rounded-full uppercase tracking-widest shadow-lg">{T.downloadCSV}</button>
                  </div>
-
-                 {groupedHistory.map(([monthKey, group]) => {
-                   const [year, month] = monthKey.split('-');
-                   return (
-                     <div key={monthKey} className="space-y-6">
-                        <div className="sticky top-24 z-10 bg-slate-100/80 backdrop-blur-md px-6 py-4 rounded-[2rem] border border-slate-200 shadow-sm flex items-center justify-between">
-                           <div>
-                              <h3 className="text-lg font-black font-washi text-slate-900">{year}年 {parseInt(month)}月</h3>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{group.items.length} {T.history}</p>
-                           </div>
-                           <div className="text-right">
-                              <p className="text-[9px] font-black text-red-700 uppercase tracking-widest mb-0.5">{T.revenue.toUpperCase()}</p>
-                              <p className="text-lg font-black text-slate-900">¥{group.totalRev.toLocaleString()}</p>
-                           </div>
-                        </div>
-                        <div className="space-y-4">
-                           {group.items.map(r => (
-                             <RecordCard key={r.id} record={r} lang={lang} onDelete={handleSafeDelete} />
-                           ))}
-                        </div>
-                     </div>
-                   );
-                 })}
+                 {records.map(r => <RecordCard key={r.id} record={r} lang={lang} onDelete={handleSafeDelete} />)}
                </>
              )}
           </div>
@@ -459,6 +406,7 @@ const App: React.FC = () => {
 
         {activeTab === 'admin' && (
           <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl text-center mt-2 border-4 border-slate-50 animate-in fade-in zoom-in duration-500">
+            {isAdmin ? (
                <div className="space-y-8">
                   <div className="text-left bg-slate-50 p-6 rounded-[2.5rem] border-2 border-slate-100 shadow-inner">
                     <h3 className="text-sm font-black font-washi mb-4 flex items-center space-x-2 text-slate-900 uppercase tracking-widest">
@@ -481,42 +429,44 @@ const App: React.FC = () => {
                          />
                        </div>
                        
-                       <div className="p-4 bg-white rounded-2xl border-2 border-slate-100 shadow-sm space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">{T.autoSync}</span>
-                            <button onClick={() => setAutoSync(!autoSync)} className={`w-12 h-6 rounded-full transition-all relative ${autoSync ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-slate-300'}`}>
-                               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-md ${autoSync ? 'left-7' : 'left-1'}`}></div>
-                            </button>
-                          </div>
-                          <p className="text-[8px] text-slate-400 font-bold leading-relaxed">{T.autoSyncDesc}</p>
+                       <div className="flex items-center justify-between p-4 bg-white rounded-2xl border-2 border-slate-100 shadow-sm">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">{T.autoSync}</span>
+                          <button onClick={() => setAutoSync(!autoSync)} className={`w-12 h-6 rounded-full transition-all relative ${autoSync ? 'bg-green-500' : 'bg-slate-300'}`}>
+                             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-md ${autoSync ? 'left-7' : 'left-1'}`}></div>
+                          </button>
                        </div>
 
                        <button 
-                         onClick={() => performCloudSync(true)} 
+                         onClick={performCloudSync} 
                          disabled={isSyncing || !cloudUrl} 
                          className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center space-x-3 active:scale-95 disabled:opacity-20 transition-all shadow-xl hover:bg-slate-800"
                        >
-                          <svg className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357-2H15" /></svg>
+                          <svg className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           <span>{T.syncNow}</span>
                        </button>
-                       
-                       {cloudUrl && (
-                         <div className="pt-2 text-center">
-                            <p className="text-[8px] text-slate-400 font-bold tracking-widest mb-4">{T.lastSync}: {lastSyncTime || '---'}</p>
-                            <a href="https://sheets.google.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 text-[10px] font-black text-green-600 uppercase tracking-widest py-2 px-4 bg-green-50 rounded-full border border-green-100 active:scale-95 transition-all">
-                               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                               <span>Spreadsheet</span>
-                            </a>
-                         </div>
-                       )}
+                       {lastSyncTime && <p className="text-[8px] text-slate-400 text-center font-bold tracking-widest">{T.lastSync}: {lastSyncTime}</p>}
                     </div>
                   </div>
+
+                  <button onClick={handleLogout} className="w-full bg-slate-200 text-slate-600 px-10 py-5 rounded-full font-black text-[10px] tracking-[0.4em] uppercase active:scale-95 transition-all hover:bg-slate-300">{T.logout}</button>
                </div>
+            ) : (
+              <form onSubmit={handleAdminLogin} className="space-y-12 py-8">
+                <div className="flex flex-col items-center">
+                  <div className="w-16 h-16 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center mb-6 shadow-2xl">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                  </div>
+                  <h2 className="text-2xl font-black font-washi tracking-tighter uppercase">{T.adminLogin}</h2>
+                </div>
+                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full p-6 bg-slate-50 rounded-[2rem] text-center text-4xl font-black focus:bg-white focus:border-red-700 outline-none border-4 border-slate-100 tracking-[0.5em] transition-all" placeholder="••••" required />
+                <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-full text-lg font-washi shadow-2xl active:scale-95 transition-all">{T.unlock}</button>
+              </form>
+            )}
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-6 left-6 right-6 h-20 glass flex justify-around items-center rounded-full shadow-2xl z-50 border border-white/60 backdrop-blur-3xl px-2 animate-in slide-in-from-bottom-20 duration-500">
+      <nav className="fixed bottom-6 left-6 right-6 h-20 glass flex justify-around items-center rounded-full shadow-2xl z-50 border border-white/60 backdrop-blur-3xl px-2">
         <button onClick={() => setActiveTab('upload')} className={`relative p-4 transition-all duration-500 rounded-full ${activeTab === 'upload' ? 'bg-red-700 text-white shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
         </button>
@@ -527,7 +477,7 @@ const App: React.FC = () => {
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </button>
         <button onClick={() => setActiveTab('admin')} className={`p-4 transition-all duration-500 rounded-full ${activeTab === 'admin' ? 'bg-slate-900 text-amber-400 shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
         </button>
       </nav>
     </div>
