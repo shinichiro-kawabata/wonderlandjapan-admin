@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { TourRecord, Language } from '../types';
-import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS } from '../constants';
+import { TourRecord, Language } from './types';
+import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS } from './constants';
 
 interface RecordCardProps {
   record: TourRecord;
@@ -11,7 +11,7 @@ interface RecordCardProps {
 }
 
 const formatDate = (dateStr: string, lang: Language) => {
-  // Attempt to parse standard formats
+  if (!dateStr) return '---';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   
@@ -28,7 +28,7 @@ const formatDate = (dateStr: string, lang: Language) => {
 };
 
 const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin = false }) => {
-  const T = TRANSLATIONS[lang];
+  const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
   const unit = lang === 'ja' ? '時間' : 'h';
   
   return (
@@ -41,7 +41,9 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin
           {TOUR_ICONS[record.type]}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-black text-slate-900 text-lg tracking-tight font-washi truncate">{T.tours[record.type]}</h4>
+          <h4 className="font-black text-slate-900 text-lg tracking-tight font-washi truncate">
+            {T.tours?.[record.type] || record.type}
+          </h4>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
              <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">
                {formatDate(record.date, lang)}

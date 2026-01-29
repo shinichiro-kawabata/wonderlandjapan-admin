@@ -2,13 +2,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TourType, TourRecord, Language } from './types';
 import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES } from './constants';
-import RecordCard from './components/RecordCard';
+import RecordCard from './RecordCard';
 import { analyzeRecords } from './services/geminiService';
 
 const ADMIN_PASSWORD = '2025';
 
 const GrowthChart: React.FC<{ data: { label: string; value: number }[], lang: Language }> = ({ data, lang }) => {
-  const T = TRANSLATIONS[lang];
+  const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
   if (data.length === 0) return (
     <div className="w-full h-[220px] flex items-center justify-center text-slate-300 font-black uppercase tracking-widest text-[10px] bg-slate-50/50 rounded-[2rem]">
       No Data Available
@@ -117,7 +117,7 @@ const App: React.FC = () => {
   const [autoSync, setAutoSync] = useState(false);
   
   const initialized = useRef(false);
-  const T = TRANSLATIONS[lang];
+  const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
   const YEARS = Array.from({ length: 2060 - 2025 + 1 }, (_, i) => 2025 + i);
 
   useEffect(() => {
@@ -231,7 +231,7 @@ const App: React.FC = () => {
   const handleDownloadCSV = () => {
     if (records.length === 0) return;
     const headers = ['Date', 'Type', 'Guide', 'Revenue', 'Guests', 'Duration'].join(',');
-    const rows = records.map(r => [r.date, T.tours[r.type], r.guide, r.revenue, r.guests, r.duration].join(','));
+    const rows = records.map(r => [r.date, T.tours?.[r.type] || r.type, r.guide, r.revenue, r.guests, r.duration].join(','));
     const csvContent = "\uFEFF" + [headers, ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -247,6 +247,7 @@ const App: React.FC = () => {
     let yearTotalRev = 0, yearTotalPax = 0;
     records.forEach(r => {
       const d = new Date(r.date);
+      if (isNaN(d.getTime())) return;
       if (d.getFullYear() === selectedYear) {
         const m = d.getMonth();
         months[m].rev += r.revenue;
@@ -259,6 +260,22 @@ const App: React.FC = () => {
   }, [records, selectedYear]);
 
   const chartData = useMemo(() => statsForSelectedYear.months.map(m => ({ label: `${m.month}`, value: m.rev })), [statsForSelectedYear]);
+
+  const currentMonthValue = useMemo(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth(); // 0-11
+    
+    if (selectedYear === currentYear) {
+      return statsForSelectedYear.months[currentMonth].rev;
+    }
+    
+    // For historical years, show total for the last month that had activity
+    const monthsWithRev = statsForSelectedYear.months.filter(m => m.rev > 0);
+    if (monthsWithRev.length > 0) return monthsWithRev[monthsWithRev.length - 1].rev;
+    
+    return 0;
+  }, [statsForSelectedYear, selectedYear]);
 
   const groupedHistory = useMemo(() => {
     const groups: Record<string, { totalRev: number, totalPax: number, items: TourRecord[] }> = {};
@@ -352,7 +369,7 @@ const App: React.FC = () => {
             <div className="grid grid-cols-2 gap-5">
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 mb-2.5 block font-washi uppercase tracking-[0.2em]">{T.revenue}</label>
-                <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ",")})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black text-xl pl-9 outline-none" placeholder="0" />
+                <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(!=\d))/g, ",")})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black text-xl pl-9 outline-none" placeholder="0" />
                 <span className="absolute left-4 top-[2.9rem] text-slate-300 text-lg font-black">¥</span>
               </div>
               <WashiSelect label={T.guests} value={formData.guests} options={guestOptions} onChange={(val: string) => setFormData({...formData, guests: val})} />
@@ -377,8 +394,8 @@ const App: React.FC = () => {
                       <p className="text-xl font-black">{statsForSelectedYear.yearTotalPax} {T.guestUnit}</p>
                    </div>
                    <div className="bg-white/5 px-6 py-3 rounded-2xl backdrop-blur-xl border border-white/10 shadow-inner">
-                      <p className="text-[10px] text-slate-500 uppercase font-black mb-1">{T.monthly} Avg</p>
-                      <p className="text-xl font-black">¥{(statsForSelectedYear.yearTotalRev / 12).toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-black mb-1">{T.monthly}</p>
+                      <p className="text-xl font-black">¥{currentMonthValue.toLocaleString()}</p>
                    </div>
                 </div>
              </div>
@@ -415,7 +432,10 @@ const App: React.FC = () => {
                     <button onClick={handleDownloadCSV} className="text-[10px] font-black bg-slate-900 text-white px-5 py-2.5 rounded-full uppercase tracking-widest shadow-xl active:scale-95 transition-all">{T.downloadCSV}</button>
                  </div>
                  {groupedHistory.map(([monthKey, group]) => {
-                   const [year, month] = monthKey.split('-');
+                   const parts = monthKey.split('-');
+                   if (parts.length < 2) return null;
+                   const year = parts[0];
+                   const month = parts[1];
                    const headerDisplay = lang === 'ja' 
                     ? `${year}年 ${parseInt(month)}月` 
                     : `${year} - ${parseInt(month)}`;
@@ -477,7 +497,7 @@ const App: React.FC = () => {
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </button>
         <button onClick={() => handleTabSwitch('settings')} className={`p-4 rounded-full ${activeTab === 'settings' ? 'bg-slate-900 text-amber-400 shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37.996.608 2.296.07 2.572-1.065z" /></svg>
         </button>
       </nav>
     </div>
