@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TourType, TourRecord, Language } from './types.ts';
-import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES } from './constants.tsx';
-import RecordCard from './components/RecordCard.tsx';
-import { analyzeRecords } from './services/geminiService.ts';
+import { TourType, TourRecord, Language } from './types';
+import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES } from './constants';
+import RecordCard from './components/RecordCard';
+import { analyzeRecords } from './services/geminiService';
 
 const ADMIN_PASSWORD = '2025';
+const COMPANY_EMAIL = 'info@wonderlandjapan.net';
 
 const WashiSelect = ({ label, value, options, onChange }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -101,6 +102,29 @@ const App: React.FC = () => {
     alert(lang === 'ja' ? '記録を保存しました' : 'Record saved!');
   };
 
+  const handleSendEmail = () => {
+    if (records.length === 0) {
+      alert('無數據可發送');
+      return;
+    }
+
+    const reportDate = new Date().toLocaleDateString();
+    const subject = `WonderlandJapan Revenue Report - ${reportDate}`;
+    
+    let body = `WonderlandJapan 營運報表 (${reportDate})\n\n`;
+    body += `總營收: ¥${stats.totalRevenue.toLocaleString()}\n`;
+    body += `總客量: ${stats.totalGuests} PAX\n`;
+    body += `總時長: ${stats.totalHours} 小時\n\n`;
+    body += `--- 詳細紀錄 ---\n`;
+    
+    records.forEach(r => {
+      body += `[${r.date}] ${r.type} | 指導: ${r.guide} | 營收: ¥${r.revenue.toLocaleString()} | 客人: ${r.guests}\n`;
+    });
+
+    const mailtoUrl = `mailto:${COMPANY_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  };
+
   const handleAiAnalyze = async () => {
     setIsAnalyzing(true);
     try {
@@ -148,29 +172,12 @@ const App: React.FC = () => {
             
             <div className="space-y-3 relative group">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 block font-washi">Service Date / 實施日期</label>
-              <div className="relative overflow-hidden rounded-[2.5rem] border-4 border-slate-50 shadow-xl transition-all active:scale-[0.98]">
-                <div className="w-full p-6 bg-slate-900 flex items-center space-x-6">
-                  <div className="flex flex-col items-center justify-center bg-red-700 w-16 h-16 rounded-[1.8rem] shadow-lg shadow-red-900/50">
-                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-red-500 font-black tracking-widest uppercase mb-1">Confirming for:</p>
-                    <p className="text-2xl text-white font-black font-washi tracking-tighter">
-                      {formData.date.split('-').map((s, i) => (
-                        <span key={i} className="inline-block">
-                          {s}{i < 2 ? <span className="text-slate-700 mx-1">/</span> : ''}
-                        </span>
-                      ))}
-                    </p>
-                  </div>
-                </div>
+              <div className="relative overflow-hidden rounded-[2.5rem] border-4 border-slate-50 shadow-xl transition-all">
                 <input 
                   type="date" 
                   value={formData.date} 
                   onChange={e => setFormData({...formData, date: e.target.value})} 
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 date-input-overlay"
+                  className="w-full p-6 bg-slate-900 text-white font-black font-washi text-xl outline-none focus:ring-4 focus:ring-red-500/20"
                   required 
                 />
               </div>
@@ -225,6 +232,14 @@ const App: React.FC = () => {
                    {isAnalyzing ? '分析中...' : '生成經營分析報告'}
                 </button>
              </div>
+
+             <button 
+              onClick={handleSendEmail}
+              className="w-full bg-white border-4 border-slate-100 p-6 rounded-[2.5rem] flex items-center justify-center space-x-4 active:scale-95 transition-all shadow-lg"
+             >
+               <svg className="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+               <span className="font-black font-washi text-slate-800">發送報表至信箱</span>
+             </button>
           </div>
         )}
 
@@ -235,7 +250,12 @@ const App: React.FC = () => {
                  <p className="font-black tracking-[0.5em] font-washi uppercase">No Records</p>
                </div>
              ) : (
-               records.map(r => <RecordCard key={r.id} record={r} onDelete={(id) => { if(confirm('刪除此紀錄？')) setRecords(prev => prev.filter(x => x.id !== id)) }} />)
+               <>
+                 <div className="flex justify-end mb-4">
+                    <button onClick={handleSendEmail} className="text-[10px] font-black bg-red-700 text-white px-6 py-3 rounded-full uppercase tracking-widest shadow-lg">Export Report</button>
+                 </div>
+                 {records.map(r => <RecordCard key={r.id} record={r} onDelete={(id) => { if(confirm('刪除此紀錄？')) setRecords(prev => prev.filter(x => x.id !== id)) }} />)}
+               </>
              )}
           </div>
         )}

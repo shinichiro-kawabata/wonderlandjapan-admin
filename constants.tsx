@@ -1,5 +1,5 @@
 import React from 'react';
-import { TourType, Language } from './types.ts';
+import { TourType, Language } from './types';
 
 export const NARA_COLORS = {
   DEER_BROWN: '#5D4037',
