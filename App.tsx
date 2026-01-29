@@ -7,7 +7,6 @@ import { analyzeRecords } from './services/geminiService';
 
 const ADMIN_PASSWORD = '2025';
 
-// Smooth trend chart
 const GrowthChart: React.FC<{ data: { label: string; value: number }[], lang: Language }> = ({ data, lang }) => {
   const T = TRANSLATIONS[lang];
   if (data.length === 0) return (
@@ -40,30 +39,21 @@ const GrowthChart: React.FC<{ data: { label: string; value: number }[], lang: La
             <stop offset="100%" stopColor="#AF2020" stopOpacity="0" />
           </linearGradient>
         </defs>
-        
         {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
           const y = height - paddingY - p * (height - paddingY * 2);
           return <line key={i} x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />;
         })}
-
-        <path d={areaPath} fill="url(#areaGradient)" className="transition-all duration-1000" />
-        <path d={path} fill="none" stroke="#AF2020" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-lg" />
-        
+        <path d={areaPath} fill="url(#areaGradient)" />
+        <path d={path} fill="none" stroke="#AF2020" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
-          <g key={i} className="group cursor-pointer">
-            <circle cx={p.x} cy={p.y} r="7" fill="white" stroke="#AF2020" strokeWidth="3" className="drop-shadow-sm" />
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="7" fill="white" stroke="#AF2020" strokeWidth="3" />
             {p.value > 0 && (
-              <text 
-                x={p.x} 
-                y={p.y - 18} 
-                textAnchor="middle" 
-                className="fill-slate-900 font-black text-[12px]"
-                style={{ fontFamily: 'Inter, sans-serif' }}
-              >
+              <text x={p.x} y={p.y - 18} textAnchor="middle" className="fill-slate-900 font-black text-[12px]">
                 ¥{(p.value / 1000).toFixed(0)}k
               </text>
             )}
-            <text x={p.x} y={height - 15} textAnchor="middle" className="fill-slate-400 font-bold text-[10px] uppercase tracking-widest">
+            <text x={p.x} y={height - 15} textAnchor="middle" className="fill-slate-400 font-bold text-[10px] uppercase">
               {p.label}{T.monthUnit}
             </text>
           </g>
@@ -87,24 +77,22 @@ const WashiSelect = ({ label, value, options, onChange }: any) => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1 block font-washi">{label}</label>
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 block font-washi">{label}</label>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-4 bg-white border-2 border-slate-100 rounded-[1.5rem] focus:border-red-500 outline-none transition-all font-bold text-slate-900 shadow-sm flex items-center justify-between active:scale-[0.98]"
+        className="w-full p-4 bg-white border-2 border-slate-100 rounded-[1.5rem] focus:border-red-500 outline-none transition-all font-bold text-slate-900 shadow-sm flex items-center justify-between"
       >
-        <span className="truncate font-washi">{options[value] || value}</span>
-        <svg className={`w-4 h-4 text-slate-300 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+        <span className="truncate">{options[value] || value}</span>
+        <svg className={`w-4 h-4 text-slate-300 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
       </button>
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-100 rounded-[1.5rem] shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in duration-200">
-          <div className="max-h-60 overflow-y-auto no-scrollbar">
-            {Object.entries(options).map(([val, label]) => (
-              <button key={val} type="button" className={`w-full text-left px-6 py-3 text-sm font-bold font-washi transition-colors hover:bg-red-50 ${value === val ? 'text-red-700 bg-red-50' : 'text-slate-700'}`} onClick={() => { onChange(val); setIsOpen(false); }}>
-                {label as string}
-              </button>
-            ))}
-          </div>
+        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-100 rounded-[1.5rem] shadow-2xl py-2 overflow-hidden max-h-60 overflow-y-auto no-scrollbar">
+          {Object.entries(options).map(([val, label]) => (
+            <button key={val} type="button" className="w-full text-left px-6 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-red-50" onClick={() => { onChange(val); setIsOpen(false); }}>
+              {label as string}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -170,7 +158,7 @@ const App: React.FC = () => {
 
   const performCloudSync = async (showAlert = true) => {
     if (!cloudUrl || !cloudUrl.startsWith('https://script.google.com')) {
-      if (showAlert) alert(T.syncError);
+      if (showAlert) alert(T.syncError || 'Sync Error');
       return;
     }
     setIsSyncing(true);
@@ -178,18 +166,16 @@ const App: React.FC = () => {
       await fetch(cloudUrl, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'sync', data: records })
       });
-
       const getResponse = await fetch(`${cloudUrl}?action=get`);
       const cloudData = await getResponse.json();
       if (Array.isArray(cloudData)) {
         mergeRecords(cloudData);
         setLastSyncTime(new Date().toLocaleString('ja-JP'));
-        if (showAlert) alert(T.syncSuccess);
+        if (showAlert) alert(T.syncSuccess || 'Sync Complete');
       }
-    } catch (err) { if (showAlert) alert(T.syncError); } finally { setIsSyncing(false); }
+    } catch (err) { if (showAlert) alert(T.syncError || 'Sync Failed'); } finally { setIsSyncing(false); }
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -239,31 +225,19 @@ const App: React.FC = () => {
     try {
       const insight = await analyzeRecords(records, lang);
       setAiInsight(insight || T.aiError);
-    } catch (err) {
-      console.error(err);
-      setAiInsight(T.aiError);
-    } finally {
-      setIsAnalyzing(false);
-    }
+    } catch (err) { setAiInsight(T.aiError); } finally { setIsAnalyzing(false); }
   };
 
   const handleDownloadCSV = () => {
     if (records.length === 0) return;
     const headers = ['Date', 'Type', 'Guide', 'Revenue', 'Guests', 'Duration'].join(',');
-    const rows = records.map(r => [
-      r.date,
-      T.tours[r.type],
-      r.guide,
-      r.revenue,
-      r.guests,
-      r.duration
-    ].join(','));
+    const rows = records.map(r => [r.date, T.tours[r.type], r.guide, r.revenue, r.guests, r.duration].join(','));
     const csvContent = "\uFEFF" + [headers, ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `wonderland_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.href = url;
+    link.download = `report_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -305,10 +279,15 @@ const App: React.FC = () => {
 
   const handleSafeDelete = (id: string) => {
     if (!isAdmin) return;
-    if (window.confirm(lang === 'ja' ? '削除しますか？' : 'Delete this record?')) {
+    if (window.confirm(lang === 'ja' ? '削除しますか？' : 'Delete?')) {
       setRecords(prev => prev.filter(x => x.id !== id));
     }
   };
+
+  const guestOptions = useMemo(() => {
+    const unit = T.guestUnit || (lang === 'ja' ? '名' : 'PAX');
+    return Object.fromEntries(Array.from({length: 15}, (_, i) => [String(i + 1), `${i + 1} ${unit}`]));
+  }, [T.guestUnit, lang]);
 
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col pb-32 relative overflow-hidden" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
@@ -376,7 +355,7 @@ const App: React.FC = () => {
                 <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ",")})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black text-xl pl-9 outline-none" placeholder="0" />
                 <span className="absolute left-4 top-[2.9rem] text-slate-300 text-lg font-black">¥</span>
               </div>
-              <WashiSelect label={T.guests} value={formData.guests} options={Object.fromEntries(Array.from({length: 15}, (_, i) => [String(i + 1), `${i + 1} ${T.guestUnit}`]))} onChange={(val: string) => setFormData({...formData, guests: val})} />
+              <WashiSelect label={T.guests} value={formData.guests} options={guestOptions} onChange={(val: string) => setFormData({...formData, guests: val})} />
             </div>
             <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-[2.5rem] text-xl font-washi active:scale-[0.96] transition-all shadow-2xl"> {T.save} </button>
           </form>
@@ -488,16 +467,16 @@ const App: React.FC = () => {
       </main>
 
       <nav className="fixed bottom-6 left-6 right-6 h-20 glass flex justify-around items-center rounded-full shadow-2xl z-50 border border-white/60 backdrop-blur-3xl px-2">
-        <button onClick={() => handleTabSwitch('upload')} className={`relative p-4 transition-all duration-500 rounded-full ${activeTab === 'upload' ? 'bg-red-700 text-white shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
+        <button onClick={() => handleTabSwitch('upload')} className={`relative p-4 rounded-full ${activeTab === 'upload' ? 'bg-red-700 text-white shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
         </button>
-        <button onClick={() => handleTabSwitch('dashboard')} className={`p-4 transition-all duration-500 rounded-full ${activeTab === 'dashboard' ? 'bg-slate-900 text-amber-400 shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
+        <button onClick={() => handleTabSwitch('dashboard')} className={`p-4 rounded-full ${activeTab === 'dashboard' ? 'bg-slate-900 text-amber-400 shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" /></svg>
         </button>
-        <button onClick={() => handleTabSwitch('history')} className={`p-4 transition-all duration-500 rounded-full ${activeTab === 'history' ? 'bg-slate-900 text-amber-400 shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
+        <button onClick={() => handleTabSwitch('history')} className={`p-4 rounded-full ${activeTab === 'history' ? 'bg-slate-900 text-amber-400 shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </button>
-        <button onClick={() => handleTabSwitch('settings')} className={`p-4 transition-all duration-500 rounded-full ${activeTab === 'settings' ? 'bg-slate-900 text-amber-400 shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
+        <button onClick={() => handleTabSwitch('settings')} className={`p-4 rounded-full ${activeTab === 'settings' ? 'bg-slate-900 text-amber-400 shadow-xl -translate-y-4 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
         </button>
       </nav>

@@ -11,32 +11,31 @@ interface RecordCardProps {
 }
 
 const formatDate = (dateStr: string, lang: Language) => {
+  // Attempt to parse standard formats
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   
   const y = d.getFullYear();
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   
   const weekdaysJa = ['日', '月', '火', '水', '木', '金', '土'];
   const weekdaysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const dow = d.getDay();
   
-  if (lang === 'ja') {
-    return `${y}/${m}/${day} (${weekdaysJa[dow]})`;
-  } else {
-    return `${y}/${m}/${day} (${weekdaysEn[dow]})`;
-  }
+  const weekday = lang === 'ja' ? weekdaysJa[dow] : weekdaysEn[dow];
+  return `${y}/${m}/${day} (${weekday})`;
 };
 
 const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin = false }) => {
   const T = TRANSLATIONS[lang];
+  const unit = lang === 'ja' ? '時間' : 'h';
   
   return (
     <div className="bg-white/70 backdrop-blur-xl rounded-[3rem] shadow-xl border border-white/50 p-7 mb-6 flex items-center justify-between group transition-all duration-700 hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1">
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-6 flex-1 min-w-0">
         <div 
-          className="p-5 rounded-[2rem] text-white shadow-2xl transform transition-transform group-hover:rotate-6 duration-700" 
+          className="p-5 rounded-[2rem] text-white shadow-2xl transform transition-transform group-hover:rotate-6 duration-700 flex-shrink-0" 
           style={{ backgroundColor: TOUR_COLORS[record.type] }}
         >
           {TOUR_ICONS[record.type]}
@@ -58,10 +57,10 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin
               </span>
             )}
             <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm">
-              {record.guests} {T.guestUnit}
+              {record.guests} {T.guestUnit || (lang === 'ja' ? '名' : 'PAX')}
             </span>
             <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm uppercase">
-              {record.duration} {lang === 'ja' ? '時間' : 'h'}
+              {record.duration} {unit}
             </span>
           </div>
         </div>
@@ -69,7 +68,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin
       {isAdmin && (
         <button 
           onClick={() => onDelete(record.id)}
-          className="p-5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-[1.5rem] transition-all active:scale-90"
+          className="p-5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-[1.5rem] transition-all flex-shrink-0"
         >
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
