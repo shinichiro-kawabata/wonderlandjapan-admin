@@ -5,7 +5,6 @@ import RecordCard from './components/RecordCard';
 import { analyzeRecords } from './services/geminiService';
 
 const ADMIN_PASSWORD = '2025';
-const COMPANY_EMAIL = 'info@wonderlandjapan.net';
 
 const WashiSelect = ({ label, value, options, onChange }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -53,6 +52,7 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [exportEmail, setExportEmail] = useState('info@wonderlandjapan.net');
 
   const T = TRANSLATIONS[lang];
 
@@ -71,6 +71,8 @@ const App: React.FC = () => {
       if (saved) setRecords(JSON.parse(saved));
       const savedAdmin = localStorage.getItem('is_admin');
       if (savedAdmin === 'true') setIsAdmin(true);
+      const savedEmail = localStorage.getItem('export_email');
+      if (savedEmail) setExportEmail(savedEmail);
     } catch (e) {
       console.error("Storage load failed", e);
     }
@@ -78,7 +80,8 @@ const App: React.FC = () => {
 
   useEffect(() => { 
     localStorage.setItem('tour_records', JSON.stringify(records)); 
-  }, [records]);
+    localStorage.setItem('export_email', exportEmail);
+  }, [records, exportEmail]);
 
   const stats = useMemo(() => {
     return records.reduce((acc, curr) => {
@@ -102,6 +105,37 @@ const App: React.FC = () => {
     alert(T.saveSuccess);
   };
 
+  const handleDownloadCSV = () => {
+    if (records.length === 0) {
+      alert(T.noRecords);
+      return;
+    }
+    const headers = ['Date', 'Type', 'Guide', 'Revenue', 'Guests', 'Duration'];
+    const rows = records.map(r => [
+      r.date,
+      T.tours[r.type],
+      r.guide,
+      r.revenue,
+      r.guests,
+      r.duration
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `wonderland_records_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSendEmail = () => {
     if (records.length === 0) {
       alert(T.noRecords);
@@ -121,7 +155,7 @@ const App: React.FC = () => {
       body += `[${r.date}] ${T.tours[r.type]} | ${T.guide}: ${r.guide} | ¥${r.revenue.toLocaleString()} | ${r.guests} PAX\n`;
     });
 
-    const mailtoUrl = `mailto:${COMPANY_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const mailtoUrl = `mailto:${exportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
   };
 
@@ -129,7 +163,7 @@ const App: React.FC = () => {
     setIsAnalyzing(true);
     try {
       const result = await analyzeRecords(records, lang);
-      setAiInsight(result || null);
+      setAiInsight(result || T.aiError);
     } catch (err) {
       setAiInsight(T.aiError);
     } finally {
@@ -233,13 +267,32 @@ const App: React.FC = () => {
                 </button>
              </div>
 
-             <button 
-              onClick={handleSendEmail}
-              className="w-full bg-white border-4 border-slate-100 p-6 rounded-[2.5rem] flex items-center justify-center space-x-4 active:scale-95 transition-all shadow-lg"
-             >
-               <svg className="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-               <span className="font-black font-washi text-slate-800">{T.exportReport}</span>
-             </button>
+             <div className="bg-white p-8 rounded-[3rem] shadow-xl space-y-4">
+               <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">Export Data</h3>
+               <input 
+                 type="email" 
+                 value={exportEmail} 
+                 onChange={e => setExportEmail(e.target.value)} 
+                 className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-red-700 font-bold"
+                 placeholder={T.emailPlaceholder}
+               />
+               <div className="grid grid-cols-2 gap-4">
+                 <button 
+                  onClick={handleSendEmail}
+                  className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex items-center justify-center space-x-2 active:scale-95 transition-all"
+                 >
+                   <svg className="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                   <span className="text-[10px] font-black font-washi">{T.exportReport}</span>
+                 </button>
+                 <button 
+                  onClick={handleDownloadCSV}
+                  className="bg-slate-900 text-white p-4 rounded-2xl flex items-center justify-center space-x-2 active:scale-95 transition-all"
+                 >
+                   <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                   <span className="text-[10px] font-black font-washi">{T.downloadCSV}</span>
+                 </button>
+               </div>
+             </div>
           </div>
         )}
 
@@ -251,8 +304,9 @@ const App: React.FC = () => {
                </div>
              ) : (
                <>
-                 <div className="flex justify-end mb-4">
-                    <button onClick={handleSendEmail} className="text-[10px] font-black bg-red-700 text-white px-6 py-3 rounded-full uppercase tracking-widest shadow-lg">{T.exportReport}</button>
+                 <div className="flex justify-end space-x-3 mb-4">
+                    <button onClick={handleDownloadCSV} className="text-[10px] font-black bg-slate-900 text-white px-4 py-2 rounded-full uppercase tracking-widest shadow-lg">Download CSV</button>
+                    <button onClick={handleSendEmail} className="text-[10px] font-black bg-red-700 text-white px-4 py-2 rounded-full uppercase tracking-widest shadow-lg">Email Report</button>
                  </div>
                  {records.map(r => <RecordCard key={r.id} record={r} lang={lang} onDelete={(id) => { if(confirm(T.deleteConfirm)) setRecords(prev => prev.filter(x => x.id !== id)) }} />)}
                </>

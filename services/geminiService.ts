@@ -4,10 +4,12 @@ import { TourRecord, Language } from "../types";
 export async function analyzeRecords(records: TourRecord[], lang: Language) {
   if (records.length === 0) return null;
   
-  const apiKey = (window as any).process?.env?.API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : '');
+  // Directly use process.env.API_KEY as per coding guidelines
+  const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
-    return "API KEY Error.";
+    console.error("API_KEY not found in environment.");
+    return null;
   }
 
   const ai = new GoogleGenAI({ apiKey });
