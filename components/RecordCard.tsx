@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { TourRecord, Language } from '../types';
 import { TOUR_COLORS, TOUR_ICONS, TRANSLATIONS } from '../constants';
@@ -6,9 +7,10 @@ interface RecordCardProps {
   record: TourRecord;
   lang: Language;
   onDelete: (id: string) => void;
+  isAdmin?: boolean;
 }
 
-const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete }) => {
+const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin = false }) => {
   const T = TRANSLATIONS[lang];
   
   return (
@@ -30,11 +32,13 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete }) => {
              </span>
           </div>
           <div className="flex flex-wrap gap-2.5 mt-4">
+            {isAdmin && (
+              <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm">
+                {record.revenue > 0 ? `¥${record.revenue.toLocaleString()}` : 'FREE'}
+              </span>
+            )}
             <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm">
-              {record.revenue > 0 ? `¥${record.revenue.toLocaleString()}` : 'FREE'}
-            </span>
-            <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm">
-              {record.guests} PAX
+              {record.guests} {T.guestUnit}
             </span>
             <span className="text-[11px] bg-white px-4 py-2 rounded-[1.2rem] text-slate-800 font-black border border-slate-100 shadow-sm uppercase">
               {record.duration} {lang === 'ja' ? '時間' : 'Hours'}
@@ -42,14 +46,16 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete }) => {
           </div>
         </div>
       </div>
-      <button 
-        onClick={() => onDelete(record.id)}
-        className="p-5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-[1.5rem] transition-all active:scale-90"
-      >
-        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-      </button>
+      {isAdmin && (
+        <button 
+          onClick={() => onDelete(record.id)}
+          className="p-5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-[1.5rem] transition-all active:scale-90"
+        >
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 };
