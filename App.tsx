@@ -103,9 +103,14 @@ const App: React.FC = () => {
 
   const handleAiAnalyze = async () => {
     setIsAnalyzing(true);
-    const result = await analyzeRecords(records);
-    setAiInsight(result || null);
-    setIsAnalyzing(false);
+    try {
+      const result = await analyzeRecords(records);
+      setAiInsight(result || null);
+    } catch (err) {
+      setAiInsight("AI 分析暫時不可用。");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -121,7 +126,7 @@ const App: React.FC = () => {
       <header className="p-6 pt-12 rounded-b-[2.5rem] shadow-2xl z-20 sticky top-0 bg-slate-900 text-white">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="bg-red-700 p-2 rounded-xl shadow-lg shadow-red-900/40 animate-pulse">
+            <div className="bg-red-700 p-2 rounded-xl shadow-lg shadow-red-900/40">
                <WonderlandLogo className="w-8 h-8" />
             </div>
             <div>
@@ -141,19 +146,15 @@ const App: React.FC = () => {
               <div className="h-1 w-12 bg-red-700 rounded-full"></div>
             </div>
             
-            {/* 高級感和風日期選取器 */}
             <div className="space-y-3 relative group">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 block font-washi">Service Performance Date / 實施日期</label>
-              <div className="relative overflow-hidden rounded-[2.5rem] border-4 border-slate-50 shadow-xl transition-all group-active:scale-[0.97] group-hover:shadow-2xl">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 block font-washi">Service Date / 實施日期</label>
+              <div className="relative overflow-hidden rounded-[2.5rem] border-4 border-slate-50 shadow-xl transition-all active:scale-[0.98]">
                 <div className="w-full p-6 bg-slate-900 flex items-center space-x-6">
-                  {/* 高級圖示區 */}
                   <div className="flex flex-col items-center justify-center bg-red-700 w-16 h-16 rounded-[1.8rem] shadow-lg shadow-red-900/50">
-                    <span className="text-[10px] text-white/70 font-black uppercase tracking-tighter mb-1">Date</span>
                     <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  {/* 日期文字區 */}
                   <div className="flex-1">
                     <p className="text-[10px] text-red-500 font-black tracking-widest uppercase mb-1">Confirming for:</p>
                     <p className="text-2xl text-white font-black font-washi tracking-tighter">
@@ -164,11 +165,7 @@ const App: React.FC = () => {
                       ))}
                     </p>
                   </div>
-                  <div className="text-slate-600 animate-bounce-x">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M9 5l7 7-7 7" /></svg>
-                  </div>
                 </div>
-                {/* 絕對覆蓋的透明 Native Input，確保任何地方都能點擊 */}
                 <input 
                   type="date" 
                   value={formData.date} 
@@ -204,67 +201,38 @@ const App: React.FC = () => {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-700">
              <div className="grid grid-cols-2 gap-5">
                <div className="bg-white p-7 rounded-[3rem] shadow-xl border-b-[12px] border-red-700 relative overflow-hidden">
-                 <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-red-50 rounded-full opacity-50"></div>
-                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em] relative z-10">Total Revenue</p>
-                 <p className="text-2xl font-black relative z-10">¥{stats.totalRevenue.toLocaleString()}</p>
+                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em]">Revenue</p>
+                 <p className="text-2xl font-black">¥{stats.totalRevenue.toLocaleString()}</p>
                </div>
                <div className="bg-white p-7 rounded-[3rem] shadow-xl border-b-[12px] border-amber-500 relative overflow-hidden">
-                 <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-amber-50 rounded-full opacity-50"></div>
-                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em] relative z-10">Total Guests</p>
-                 <p className="text-2xl font-black relative z-10">{stats.totalGuests} PAX</p>
+                 <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-[0.1em]">Guests</p>
+                 <p className="text-2xl font-black">{stats.totalGuests} PAX</p>
                </div>
              </div>
              
              <div className="bg-slate-900 text-white p-8 rounded-[3.5rem] shadow-2xl relative">
-                <div className="absolute top-6 right-8">
-                  <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                    <span className="text-amber-400 text-xl font-black">✦</span>
-                  </div>
-                </div>
-                <h3 className="text-lg font-black font-washi mb-6 flex items-center space-x-3">
-                   <span>AI 數據營運分析</span>
+                <h3 className="text-lg font-black font-washi mb-4 flex items-center space-x-3 text-amber-400">
+                   <span>✦ AI Insights</span>
                 </h3>
-                <div className="text-xs leading-[1.8] opacity-80 font-washi whitespace-pre-wrap min-h-[120px]">
-                  {aiInsight || '點擊下方按鈕，AI 經營顧問將為您解析目前的營收與客源分佈情形。'}
+                <div className="text-xs leading-[1.8] opacity-80 font-washi whitespace-pre-wrap min-h-[100px]">
+                  {aiInsight || '點擊下方按鈕，AI 顧問將為您解析經營現況。'}
                 </div>
                 <button 
                   onClick={handleAiAnalyze} 
                   disabled={isAnalyzing || records.length === 0} 
-                  className="w-full bg-red-700 text-white font-black py-4 rounded-full text-xs mt-8 active:scale-95 transition-all disabled:opacity-30 shadow-xl shadow-black/40 border border-red-500/30"
+                  className="w-full bg-red-700 text-white font-black py-4 rounded-full text-xs mt-8 active:scale-95 transition-all disabled:opacity-30 border border-red-500/30"
                 >
-                   {isAnalyzing ? '分析中...' : '生成智能經營報告'}
+                   {isAnalyzing ? '分析中...' : '生成經營分析報告'}
                 </button>
-             </div>
-
-             <div className="bg-white p-8 rounded-[3rem] shadow-xl">
-                <h3 className="text-[10px] font-black text-slate-400 mb-8 uppercase tracking-[0.3em] text-center">Revenue Distribution / 營收分佈</h3>
-                <div className="space-y-6">
-                   {Object.entries(stats.revenueByTour).map(([type, rev]: [any, any]) => (
-                     rev > 0 && (
-                       <div key={type} className="space-y-2">
-                          <div className="flex justify-between text-xs font-black px-1">
-                             <span className="text-slate-700 font-washi">{type}</span>
-                             <span className="text-slate-900">¥{rev.toLocaleString()}</span>
-                          </div>
-                          <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5">
-                             <div className="h-full rounded-full transition-all duration-1000 shadow-inner" style={{ width: `${(rev / (stats.totalRevenue || 1)) * 100}%`, backgroundColor: TOUR_COLORS[type as TourType] }}></div>
-                          </div>
-                       </div>
-                     )
-                   ))}
-                </div>
              </div>
           </div>
         )}
 
-        {activeTab === 'history' && isAdmin && (
+        {(activeTab === 'history' && isAdmin) && (
           <div className="space-y-6 animate-in fade-in slide-in-from-left-8 duration-700">
              {records.length === 0 ? (
                <div className="py-32 text-center opacity-20">
-                 <div className="w-24 h-24 border-4 border-slate-900 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                 </div>
-                 <p className="font-black tracking-[0.5em] font-washi">NO RECORDS FOUND</p>
+                 <p className="font-black tracking-[0.5em] font-washi uppercase">No Records</p>
                </div>
              ) : (
                records.map(r => <RecordCard key={r.id} record={r} onDelete={(id) => { if(confirm('刪除此紀錄？')) setRecords(prev => prev.filter(x => x.id !== id)) }} />)
@@ -276,51 +244,34 @@ const App: React.FC = () => {
           <div className="bg-white p-12 rounded-[4rem] shadow-2xl text-center mt-6 border-4 border-slate-50">
             {isAdmin ? (
                <div className="py-6">
-                  <div className="bg-green-50 text-green-600 p-6 rounded-[2.5rem] w-24 h-24 flex items-center justify-center mx-auto mb-8 shadow-inner border-2 border-green-100">
-                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                  <h2 className="text-2xl font-black font-washi mb-4">管理者身分已認證</h2>
-                  <p className="text-xs text-slate-400 font-bold mb-10 uppercase tracking-widest">Administrator Authenticated</p>
-                  <button onClick={handleLogout} className="w-full bg-slate-900 text-white px-10 py-5 rounded-full font-black text-xs tracking-[0.3em] uppercase shadow-xl active:scale-95 transition-all">EXIT ADMIN MODE</button>
+                  <h2 className="text-2xl font-black font-washi mb-4">管理者認證成功</h2>
+                  <button onClick={handleLogout} className="w-full bg-slate-900 text-white px-10 py-5 rounded-full font-black text-xs tracking-[0.3em] uppercase">退出管理者模式</button>
                </div>
             ) : (
               <form onSubmit={handleAdminLogin} className="space-y-12">
-                <div className="bg-slate-50 p-8 rounded-[3rem] w-28 h-28 flex items-center justify-center mx-auto shadow-inner border-4 border-white rotate-3">
-                  <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                </div>
-                <div className="space-y-3">
-                  <h2 className="text-3xl font-black font-washi tracking-tighter">SECURE ACCESS</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.4em]">Restricted Manager Area</p>
-                </div>
-                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full p-6 bg-slate-50 rounded-[2rem] text-center text-4xl font-black focus:border-red-700 outline-none border-4 border-slate-100 transition-all tracking-[0.5em]" placeholder="••••" required />
-                <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-full text-lg font-washi shadow-2xl shadow-red-900/40 active:scale-95 transition-all">AUTHENTICATE</button>
+                <h2 className="text-3xl font-black font-washi tracking-tighter">SECURE ACCESS</h2>
+                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full p-6 bg-slate-50 rounded-[2rem] text-center text-4xl font-black focus:border-red-700 outline-none border-4 border-slate-100 tracking-[0.5em]" placeholder="••••" required />
+                <button type="submit" className="w-full bg-red-700 text-white font-black py-6 rounded-full text-lg font-washi shadow-2xl active:scale-95 transition-all">AUTHENTICATE</button>
               </form>
             )}
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-8 left-8 right-8 h-24 glass px-12 flex justify-between items-center rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 border border-white/60">
-        <button onClick={() => setActiveTab('upload')} className={`transition-all duration-500 ${activeTab === 'upload' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
+      <nav className="fixed bottom-8 left-8 right-8 h-24 glass px-12 flex justify-between items-center rounded-full shadow-2xl z-50 border border-white/60">
+        <button onClick={() => setActiveTab('upload')} className={`transition-all duration-300 ${activeTab === 'upload' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
         </button>
-        <button onClick={() => setActiveTab('dashboard')} className={`transition-all duration-500 ${activeTab === 'dashboard' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
+        <button onClick={() => setActiveTab('dashboard')} className={`transition-all duration-300 ${activeTab === 'dashboard' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" /></svg>
         </button>
-        <button onClick={() => setActiveTab('history')} className={`transition-all duration-500 ${activeTab === 'history' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
+        <button onClick={() => setActiveTab('history')} className={`transition-all duration-300 ${activeTab === 'history' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </button>
-        <button onClick={() => setActiveTab('admin')} className={`transition-all duration-500 ${activeTab === 'admin' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
+        <button onClick={() => setActiveTab('admin')} className={`transition-all duration-300 ${activeTab === 'admin' ? 'text-red-700 scale-125' : 'text-slate-300'}`}>
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
         </button>
       </nav>
-      <style>{`
-        @keyframes bounce-x {
-          0%, 100% { transform: translateX(0); }
-          50% { transform: translateX(5px); }
-        }
-        .animate-bounce-x { animation: bounce-x 1.5s ease-in-out infinite; }
-      `}</style>
     </div>
   );
 };
