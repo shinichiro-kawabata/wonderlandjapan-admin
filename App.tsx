@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { TourType, TourRecord, Language } from './types';
 import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES } from './constants';
-import RecordCard from './RecordCard';
+import RecordCard from './RecordCard.tsx'; // 明確路徑，解決建置解析錯誤
 import { analyzeRecords } from './services/geminiService';
 
 const ADMIN_PASSWORD = '2025';
@@ -19,7 +19,7 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [targetTabAfterLogin, setTargetTabAfterLogin] = useState<typeof activeTab | null>(null);
   
-  // 強制從 2025 開始，徹底移除 2024
+  // 核心邏輯：嚴格鎖定 2025 年開始
   const [selectedYear, setSelectedYear] = useState(2025);
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
   
@@ -30,7 +30,7 @@ const App: React.FC = () => {
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
   const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
-  const YEARS = [2025, 2026, 2027, 2028, 2029, 2030]; 
+  const YEARS = [2025, 2026, 2027, 2028, 2029, 2030]; // 徹底移除 2024
   const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ const App: React.FC = () => {
         const savedRecords = localStorage.getItem('tour_records');
         if (savedRecords) {
           const parsed = JSON.parse(savedRecords);
-          if (Array.isArray(parsed) && parsed.length > 0) setRecords(parsed);
+          if (Array.isArray(parsed)) setRecords(parsed);
         }
         const savedUrl = localStorage.getItem('cloud_sync_url');
         if (savedUrl) setCloudUrl(savedUrl);
@@ -48,8 +48,8 @@ const App: React.FC = () => {
         const savedAdmin = localStorage.getItem('is_admin');
         if (savedAdmin === 'true') setIsAdmin(true);
         setIsInitialLoadDone(true);
-        if (savedUrl) setTimeout(() => performCloudSync(false), 500);
       } catch (e) {
+        console.error("Storage Initialization Failed", e);
         setIsInitialLoadDone(true);
       }
     };
@@ -57,7 +57,9 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => { 
-    if (isInitialLoadDone) localStorage.setItem('tour_records', JSON.stringify(records)); 
+    if (isInitialLoadDone) {
+      localStorage.setItem('tour_records', JSON.stringify(records)); 
+    }
   }, [records, isInitialLoadDone]);
 
   const performCloudSync = async (showAlert = true, overrideData?: TourRecord[]) => {
@@ -77,7 +79,11 @@ const App: React.FC = () => {
         setLastSyncTime(new Date().toLocaleString('ja-JP'));
         if (showAlert) alert(T.syncSuccess);
       }
-    } catch (err) { if (showAlert) alert(T.syncError); } finally { setIsSyncing(false); }
+    } catch (err) { 
+      if (showAlert) alert(T.syncError); 
+    } finally { 
+      setIsSyncing(false); 
+    }
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -162,10 +168,10 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col pb-32 relative overflow-x-hidden" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
-      <header className="p-6 pt-12 rounded-b-[2.5rem] shadow-2xl z-20 sticky top-0 bg-slate-900 text-white transition-all duration-500">
+      <header className="p-6 pt-12 rounded-b-[2.5rem] shadow-2xl z-20 sticky top-0 bg-slate-900 text-white">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="bg-red-700 p-2 rounded-xl shadow-lg animate-pulse"> <WonderlandLogo className="w-8 h-8" /> </div>
+            <div className="bg-red-700 p-2 rounded-xl shadow-lg"> <WonderlandLogo className="w-8 h-8" /> </div>
             <div>
               <h1 className="text-xl font-black font-washi leading-tight tracking-tight uppercase">WONDERLAND</h1>
               <p className="text-[8px] font-bold tracking-[0.5em] uppercase text-red-500">Japan Hub</p>
@@ -180,7 +186,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-6 z-10 overflow-y-auto no-scrollbar">
+      <main className="flex-1 p-6 z-10 overflow-y-auto no-scrollbar animate-in fade-in duration-500">
         {showLogin && (
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6">
              <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-300">
@@ -377,15 +383,15 @@ const App: React.FC = () => {
                 </button>
                 {lastSyncTime && <p className="text-center text-[10px] font-black text-slate-300 uppercase tracking-widest font-mono">{T.lastSync}: {lastSyncTime}</p>}
                 
-                {/* 核心簽名區域：Benjamin Tang */}
-                <div className="mt-20 pt-12 border-t-2 border-slate-50 text-center animate-in fade-in slide-in-from-bottom-5 duration-1000">
-                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] mb-4">Masterfully Crafted by</p>
+                {/* Benjamin Tang 明星級藝術簽名區 */}
+                <div className="mt-24 pt-12 border-t-2 border-slate-50 text-center animate-in fade-in duration-1000">
+                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.6em] mb-4">Masterfully Crafted by</p>
                    <div className="relative inline-block group">
-                      <p className="text-5xl font-signature text-slate-900 mb-8 px-6 transform -rotate-2 group-hover:rotate-0 transition-transform duration-700 cursor-default select-none">Benjamin Tang</p>
+                      <p className="text-6xl font-signature text-slate-900 mb-8 px-6 transform -rotate-2 group-hover:rotate-0 transition-all duration-700 cursor-default select-none">Benjamin Tang</p>
                       <div className="absolute -bottom-2 left-0 w-full h-1 bg-red-700/10 rounded-full blur-sm" />
                    </div>
-                   <div className="flex items-center justify-center space-x-3 text-[9px] font-black text-slate-400 uppercase tracking-[0.5em] mt-4 opacity-40">
-                      <span className="text-xs">©</span>
+                   <div className="flex items-center justify-center space-x-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.6em] mt-6 opacity-40">
+                      <span className="text-sm">©</span>
                       <span>WonderlandJapan Admin Core</span>
                    </div>
                    <div className="mt-2 text-[8px] font-bold text-slate-200 uppercase tracking-[0.2em]">All Rights Reserved 2025</div>
