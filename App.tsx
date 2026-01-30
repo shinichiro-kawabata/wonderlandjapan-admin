@@ -261,16 +261,18 @@ const App: React.FC = () => {
 
   const chartData = useMemo(() => statsForSelectedYear.months.map(m => ({ label: `${m.month}`, value: m.rev })), [statsForSelectedYear]);
 
+  // 更新邏輯：顯示「選定年份中，當前月份或最後有數據月份」的營收
   const currentMonthValue = useMemo(() => {
     const today = new Date();
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth(); // 0-11
+    const currentMonthIndex = today.getMonth(); // 0-11
     
+    // 如果是看今年，直接抓當月
     if (selectedYear === currentYear) {
-      return statsForSelectedYear.months[currentMonth].rev;
+      return statsForSelectedYear.months[currentMonthIndex].rev;
     }
     
-    // For historical years, show total for the last month that had activity
+    // 如果是看往年，找最後一個有營收的月份（通常是 12 月或最後一筆數據所在月）
     const monthsWithRev = statsForSelectedYear.months.filter(m => m.rev > 0);
     if (monthsWithRev.length > 0) return monthsWithRev[monthsWithRev.length - 1].rev;
     
@@ -369,7 +371,7 @@ const App: React.FC = () => {
             <div className="grid grid-cols-2 gap-5">
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 mb-2.5 block font-washi uppercase tracking-[0.2em]">{T.revenue}</label>
-                <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(!=\d))/g, ",")})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black text-xl pl-9 outline-none" placeholder="0" />
+                <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ",")})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black text-xl pl-9 outline-none" placeholder="0" />
                 <span className="absolute left-4 top-[2.9rem] text-slate-300 text-lg font-black">¥</span>
               </div>
               <WashiSelect label={T.guests} value={formData.guests} options={guestOptions} onChange={(val: string) => setFormData({...formData, guests: val})} />
@@ -391,7 +393,7 @@ const App: React.FC = () => {
                 <div className="flex items-center space-x-6">
                    <div className="bg-white/5 px-6 py-3 rounded-2xl backdrop-blur-xl border border-white/10 shadow-inner">
                       <p className="text-[10px] text-slate-500 uppercase font-black mb-1">{T.guests}</p>
-                      <p className="text-xl font-black">{statsForSelectedYear.yearTotalPax} {T.guestUnit}</p>
+                      <p className="text-xl font-black">{statsForSelectedYear.yearTotalPax} {T.guestUnit || (lang === 'ja' ? '名' : 'PAX')}</p>
                    </div>
                    <div className="bg-white/5 px-6 py-3 rounded-2xl backdrop-blur-xl border border-white/10 shadow-inner">
                       <p className="text-[10px] text-slate-500 uppercase font-black mb-1">{T.monthly}</p>
@@ -409,13 +411,15 @@ const App: React.FC = () => {
                  <div key={m.month} className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-2xl hover:-translate-y-1 transition-all group">
                     <span className="text-[11px] font-black text-slate-300 group-hover:text-red-700 transition-colors uppercase tracking-[0.2em] font-washi">{m.month}{T.monthUnit}</span>
                     <p className="text-2xl font-black text-slate-900 leading-none mb-2 tracking-tight">¥{m.rev.toLocaleString()}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{m.pax} {T.guestUnit}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{m.pax} {T.guestUnit || (lang === 'ja' ? '名' : 'PAX')}</p>
                  </div>
                ))}
              </div>
              <div className="bg-slate-900 text-white p-9 rounded-[3.5rem] shadow-2xl relative border border-white/5">
                 <h3 className="text-lg font-black font-washi mb-6 text-amber-400">{T.aiInsights}</h3>
-                <div className="text-xs leading-[2] opacity-70 font-washi whitespace-pre-wrap min-h-[120px]">{aiInsight || T.aiPlaceholder}</div>
+                <div className="text-xs leading-[2] opacity-70 font-washi whitespace-pre-wrap min-h-[120px] prose prose-invert max-w-none">
+                  {aiInsight || T.aiPlaceholder}
+                </div>
                 <button onClick={handleAiAnalyze} disabled={isAnalyzing || records.length === 0} className="w-full bg-red-700 text-white font-black py-5 rounded-full text-[10px] uppercase tracking-[0.3em] mt-10 active:scale-95 disabled:opacity-30"> {isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn} </button>
              </div>
           </div>
