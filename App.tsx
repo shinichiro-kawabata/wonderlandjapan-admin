@@ -4,7 +4,7 @@ import { TourType, TourRecord, Language } from './types';
 import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES, TOUR_ICONS } from './constants';
 import { analyzeRecords } from './services/geminiService';
 
-// --- RecordCard Internal Component (Optimized for Design) ---
+// --- RecordCard Component (High-End Design) ---
 const formatDate = (dateStr: string, lang: Language) => {
   if (!dateStr) return '---';
   const d = new Date(dateStr);
@@ -22,9 +22,9 @@ const formatDate = (dateStr: string, lang: Language) => {
 const RecordCardInternal: React.FC<{ record: TourRecord; lang: Language; onDelete: (id: string) => void; isAdmin?: boolean }> = ({ record, lang, onDelete, isAdmin = false }) => {
   const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
   return (
-    <div className="bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 p-6 mb-5 flex items-center justify-between transition-all active:scale-[0.97] group">
+    <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 p-6 mb-5 flex items-center justify-between transition-all active:scale-[0.97] group">
       <div className="flex items-center space-x-5 flex-1 min-w-0">
-        <div className="p-4 rounded-2xl text-white shadow-lg flex-shrink-0" style={{ backgroundColor: TOUR_COLORS[record.type] }}>
+        <div className="p-4 rounded-2xl text-white shadow-lg flex-shrink-0 transition-transform group-hover:rotate-6" style={{ backgroundColor: TOUR_COLORS[record.type] }}>
           {TOUR_ICONS[record.type]}
         </div>
         <div className="flex-1 min-w-0">
@@ -111,11 +111,12 @@ const App: React.FC = () => {
     if (isInitialLoadDone) localStorage.setItem('tour_records', JSON.stringify(records)); 
   }, [records, isInitialLoadDone]);
 
+  // 按月份分組，不按星期
   const groupedHistory = useMemo(() => {
     const groups: Record<string, TourRecord[]> = {};
     const sortedRecords = [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     sortedRecords.forEach(r => {
-      const key = r.date.substring(0, 7); 
+      const key = r.date.substring(0, 7); // YYYY-MM
       if (!groups[key]) groups[key] = [];
       groups[key].push(r);
     });
@@ -207,20 +208,10 @@ const App: React.FC = () => {
     return { rev: filtered.reduce((acc, r) => acc + r.revenue, 0), pax: filtered.reduce((acc, r) => acc + r.guests, 0), count: filtered.length, raw: filtered };
   }, [records, selectedYear, selectedMonth]);
 
-  const handleAiAnalyze = async () => {
-    if (stats.raw.length === 0) { setAiInsight(T.noRecords); return; }
-    setIsAnalyzing(true);
-    setAiInsight(null);
-    try {
-      const insight = await analyzeRecords(stats.raw, lang);
-      setAiInsight(insight);
-    } catch (err) { setAiInsight(T.aiError); } finally { setIsAnalyzing(false); }
-  };
-
   const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], type: TourType.GION_WALK, guide: GUIDES[0], revenue: '', guests: '1', duration: 3 });
 
   return (
-    <div className="fixed inset-0 w-full h-full flex flex-col overflow-hidden" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
+    <div className="fixed inset-0 w-full h-full flex flex-col overflow-hidden select-none" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
       <header className="p-6 pt-12 rounded-b-[2.5rem] shadow-2xl z-20 bg-slate-900 text-white shrink-0">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -237,10 +228,10 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-6 overflow-y-auto no-scrollbar relative z-10 w-full max-w-md mx-auto pb-36">
+      <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-md mx-auto pb-40">
         {showLogin && (
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6">
-             <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8">
+             <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-300">
                 <div className="w-20 h-20 bg-red-700 rounded-3xl mx-auto flex items-center justify-center text-white shadow-xl">
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 </div>
@@ -265,7 +256,7 @@ const App: React.FC = () => {
             setFormData({ ...formData, revenue: '', guests: '1', duration: 3 });
             alert(T.saveSuccess);
             if (autoSync && cloudUrl) performCloudSync(false, updated);
-          }} className="bg-white p-8 rounded-[3.5rem] shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-10">
+          }} className="bg-white p-8 rounded-[3.5rem] shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-10 w-full overflow-hidden">
             <h2 className="text-2xl font-black font-washi text-slate-900 border-l-8 border-red-700 pl-6 uppercase tracking-tighter">{T.upload}</h2>
             <div className="space-y-6">
               <div className="space-y-2">
@@ -275,15 +266,25 @@ const App: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.guide}</label>
-                   <select value={formData.guide} onChange={e => setFormData({...formData, guide: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-black text-xl outline-none shadow-inner focus:border-red-700 appearance-none">
-                     {GUIDES.map(g => <option key={g} value={g}>{g}</option>)}
-                   </select>
+                   <div className="relative">
+                    <select value={formData.guide} onChange={e => setFormData({...formData, guide: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-black text-xl outline-none shadow-inner focus:border-red-700 appearance-none">
+                      {GUIDES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                   </div>
                 </div>
                 <div className="space-y-2">
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.type}</label>
-                   <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as TourType})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold outline-none shadow-inner focus:border-red-700 text-xs appearance-none">
-                     {Object.entries(T.tours).map(([val, label]) => <option key={val} value={val}>{label as string}</option>)}
-                   </select>
+                   <div className="relative">
+                    <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as TourType})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold outline-none shadow-inner focus:border-red-700 text-[11px] appearance-none leading-tight">
+                      {Object.entries(T.tours).map(([val, label]) => <option key={val} value={val}>{label as string}</option>)}
+                    </select>
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                   </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -293,20 +294,25 @@ const App: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.guests}</label>
-                  <select value={formData.guests} onChange={e => setFormData({...formData, guests: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-black text-2xl outline-none shadow-inner appearance-none">
-                    {Array.from({length: 15}, (_, i) => <option key={i+1} value={i+1}>{i+1} {T.guestUnit}</option>)}
-                  </select>
+                  <div className="relative">
+                    <select value={formData.guests} onChange={e => setFormData({...formData, guests: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-black text-2xl outline-none shadow-inner appearance-none">
+                      {Array.from({length: 15}, (_, i) => <option key={i+1} value={i+1}>{i+1} {T.guestUnit}</option>)}
+                    </select>
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                   </div>
                 </div>
               </div>
-              <button type="submit" className="w-full bg-red-700 text-white font-black py-7 rounded-[3rem] text-2xl font-washi active:scale-[0.96] transition-all shadow-[0_20px_40px_rgba(175,32,32,0.3)] uppercase tracking-[0.2em] relative">
-                <span className="relative z-10 text-white">{T.saveRecordBtn}</span>
+              <button type="submit" className="w-full bg-red-700 h-24 rounded-[3rem] shadow-2xl active:scale-[0.96] transition-all flex items-center justify-center overflow-hidden border-b-8 border-red-900">
+                <span className="text-white font-black text-2xl font-washi uppercase tracking-[0.2em]">{T.saveRecordBtn}</span>
               </button>
             </div>
           </form>
         )}
 
         {activeTab === 'dashboard' && isAdmin && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-10 pb-10">
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-10 pb-10 w-full overflow-hidden">
              <div className="flex flex-wrap gap-2">
                 {YEARS.map(y => (
                   <button key={y} onClick={() => setSelectedYear(y)} className={`px-6 py-3 rounded-full font-black text-xs border-2 transition-all ${selectedYear === y ? 'bg-red-700 text-white border-red-700 shadow-lg' : 'bg-white text-slate-300 border-slate-100'}`}>{y}</button>
@@ -324,7 +330,9 @@ const App: React.FC = () => {
                 <button onClick={() => setSelectedMonth('all')} className="w-full text-[11px] font-black text-slate-900 border-t border-slate-50 pt-6 uppercase tracking-tighter">{T.viewFullYear}</button>
              </div>
              <div className="bg-slate-900 text-white p-12 rounded-[4.5rem] shadow-2xl">
-                <p className="text-amber-400 text-[10px] font-black uppercase tracking-[0.6em] mb-6">{selectedYear} • {selectedMonth === 'all' ? T.annualSummary : `${T.monthlyPerformance} (${selectedMonth}${T.monthUnit})`}</p>
+                <p className="text-amber-400 text-[10px] font-black uppercase tracking-[0.6em] mb-6">
+                  {selectedYear} • {selectedMonth === 'all' ? (T.annualSummary || 'ANNUAL') : `${T.monthlyPerformance || 'MONTH'} (${selectedMonth}${T.monthUnit})`}
+                </p>
                 <div className="flex items-baseline space-x-3 mb-10">
                    <span className="text-xl font-black text-slate-600">¥</span>
                    <h2 className="text-7xl font-black font-washi tracking-tighter truncate">{stats.rev.toLocaleString()}</h2>
@@ -343,28 +351,30 @@ const App: React.FC = () => {
              <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl relative">
                 <h3 className="text-2xl font-black font-washi text-slate-900 mb-8 uppercase tracking-tighter">{T.aiInsights}</h3>
                 <div className="text-[13px] leading-[2.4] text-slate-600 font-washi whitespace-pre-wrap min-h-[200px] bg-slate-50 p-8 rounded-3xl border border-slate-100">{aiInsight || T.aiPlaceholder}</div>
-                <button onClick={handleAiAnalyze} disabled={isAnalyzing} className="w-full bg-slate-900 text-white font-black py-7 rounded-full text-[11px] uppercase tracking-[0.3em] mt-10 active:scale-95 disabled:opacity-30">{isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn}</button>
+                <button onClick={() => { setIsAnalyzing(true); setAiInsight(null); analyzeRecords(stats.raw, lang).then(setAiInsight).finally(() => setIsAnalyzing(false)); }} disabled={isAnalyzing} className="w-full h-20 bg-slate-900 text-white font-black rounded-full text-[11px] uppercase tracking-[0.3em] mt-10 active:scale-95 disabled:opacity-30 flex items-center justify-center">
+                  {isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn}
+                </button>
              </div>
           </div>
         )}
 
         {activeTab === 'history' && isAdmin && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-left-10 pb-10">
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-10 pb-10 w-full overflow-hidden">
              <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter mb-8 ml-2">{T.archives}</h2>
              {Object.keys(groupedHistory).length === 0 ? (
                <div className="py-40 text-center text-slate-200 font-black tracking-[0.8em] text-xs uppercase">Empty</div>
              ) : (
                Object.entries(groupedHistory).map(([monthKey, monthRecords]) => (
-                 <div key={monthKey} className="space-y-3">
+                 <div key={monthKey} className="space-y-4">
                     <button 
                       onClick={() => setExpandedMonths(prev => prev.includes(monthKey) ? prev.filter(k => k !== monthKey) : [...prev, monthKey])}
-                      className="w-full flex justify-between items-center bg-white px-8 py-5 rounded-[2rem] border border-slate-100 font-black text-sm text-slate-800 tracking-widest shadow-sm active:scale-95 transition-all"
+                      className="w-full flex justify-between items-center bg-white px-8 py-6 rounded-[2.5rem] border-2 border-slate-100 font-black text-base text-slate-800 tracking-widest shadow-lg active:scale-95 transition-all"
                     >
-                       <span className="font-washi">{monthKey.replace('-', ' / ')}</span>
-                       <svg className={`w-5 h-5 transition-transform duration-500 ${expandedMonths.includes(monthKey) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                       <span className="font-washi">{monthKey.replace('-', ' / ')} {lang === 'ja' ? '月' : ''}</span>
+                       <svg className={`w-6 h-6 transition-transform duration-500 ${expandedMonths.includes(monthKey) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                     </button>
                     {expandedMonths.includes(monthKey) && (
-                      <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-4 duration-500">
+                      <div className="space-y-5 pt-1 animate-in fade-in slide-in-from-top-6 duration-500">
                         {monthRecords.map(r => <RecordCardInternal key={r.id} record={r} lang={lang} onDelete={handleDeleteRecord} isAdmin={isAdmin} />)}
                       </div>
                     )}
@@ -375,43 +385,43 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-8 animate-in zoom-in duration-500 pb-10">
-             <div className="bg-white p-12 rounded-[4.5rem] shadow-2xl space-y-10 flex flex-col min-h-[65vh] relative">
+          <div className="space-y-8 animate-in zoom-in duration-500 pb-10 w-full overflow-hidden">
+             <div className="bg-white p-12 rounded-[4.5rem] shadow-2xl space-y-10 flex flex-col min-h-[70vh] relative">
                 <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter border-b-4 border-red-700 w-fit pb-2">{T.system}</h2>
                 
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-2">{T.cloudEndpoint}</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-2">{T.cloudEndpoint || 'CLOUD ENDPOINT'}</label>
                   <input type="text" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="https://script.google.com/..." className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] text-xs font-bold outline-none focus:border-red-700 shadow-inner" />
                 </div>
 
-                <button onClick={() => performCloudSync()} disabled={isSyncing} className="w-full bg-slate-900 text-white font-black py-7 rounded-[3rem] text-[11px] uppercase tracking-[0.4em] active:scale-95 disabled:opacity-30 shadow-2xl transition-all h-20 flex items-center justify-center">
-                  <span className="text-white opacity-100">{isSyncing ? 'SYNCING...' : T.forceSync}</span>
+                <button onClick={() => performCloudSync()} disabled={isSyncing} className="w-full bg-slate-900 h-24 rounded-[3rem] shadow-2xl active:scale-95 disabled:opacity-30 transition-all flex items-center justify-center border-b-8 border-slate-950">
+                  <span className="text-white font-black text-[11px] uppercase tracking-[0.4em]">{isSyncing ? 'SYNCING...' : T.forceSync}</span>
                 </button>
                 
                 {lastSyncTime && <p className="text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">{T.lastSync}: {lastSyncTime}</p>}
                 
-                {/* 🌟 版權與簽名優化區 🌟 */}
-                <div className="mt-auto pt-20 text-center">
-                   <div className="mb-8">
-                      <p className="text-[16px] font-black text-slate-400 uppercase tracking-[0.4em] mb-1 font-washi">© WONDERLAND JAPAN</p>
-                      <p className="text-[9px] font-bold text-slate-200 uppercase tracking-widest">All Rights Reserved 2025</p>
+                <div className="mt-auto pt-20 text-center flex flex-col items-center">
+                   <div className="mb-10">
+                      <p className="text-[18px] font-black text-slate-900 uppercase tracking-[0.5em] mb-2 font-washi leading-none">WONDERLAND JAPAN</p>
+                      <div className="h-1 w-24 bg-red-700 mx-auto rounded-full mb-3" />
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">© All Rights Reserved 2025</p>
                    </div>
                    
-                   <div className="opacity-30">
-                      <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.8em] mb-2">Designed by</p>
-                      <p className="text-2xl font-signature text-slate-400 select-none">Benjamin Tang</p>
+                   <div className="opacity-40 transition-opacity hover:opacity-100 duration-1000">
+                      <p className="text-[8px] font-black text-slate-300 uppercase tracking-[1em] mb-2 ml-2">DESIGNED BY</p>
+                      <p className="text-3xl font-signature text-slate-500 select-none transform -rotate-2">Benjamin Tang</p>
                    </div>
                 </div>
 
                 {isAdmin && (
-                  <button onClick={handleLogout} className="w-full py-6 mt-6 text-red-400 text-[11px] font-black uppercase tracking-[0.3em] hover:bg-red-50 rounded-full transition-all">Sign Out</button>
+                  <button onClick={handleLogout} className="w-full py-6 mt-8 text-red-400 text-[11px] font-black uppercase tracking-[0.3em] hover:bg-red-50 rounded-full transition-all">Sign Out</button>
                 )}
              </div>
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-6 left-6 right-6 h-22 glass flex justify-around items-center rounded-full shadow-[0_30px_60px_rgba(0,0,0,0.2)] z-50 border border-white/60 px-6">
+      <nav className="fixed bottom-6 left-6 right-6 h-22 glass flex justify-around items-center rounded-full shadow-[0_30px_60px_rgba(0,0,0,0.3)] z-50 border border-white/60 px-6">
         <button onClick={() => handleTabSwitch('upload')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'upload' ? 'bg-red-700 text-white -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300'}`}>
           <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
         </button>
