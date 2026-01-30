@@ -83,13 +83,22 @@ const App: React.FC = () => {
   const YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
   const MONTHS_LIST = Array.from({ length: 12 }, (_, i) => i + 1);
 
+  // 核心邏輯：過濾掉空數據（revenue 和 guests 都是 0 的紀錄）以及無效日期
+  const filterInvalidRecords = (raw: any[]): TourRecord[] => {
+    return raw.filter(r => {
+      const hasContent = Number(r.revenue) > 0 || Number(r.guests) > 0;
+      const hasDate = r.date && !isNaN(new Date(r.date).getTime());
+      return hasContent && hasDate;
+    });
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
         const savedRecords = localStorage.getItem('tour_records');
         if (savedRecords) {
           const parsed = JSON.parse(savedRecords);
-          if (Array.isArray(parsed)) setRecords(parsed);
+          if (Array.isArray(parsed)) setRecords(filterInvalidRecords(parsed));
         }
         const savedUrl = localStorage.getItem('cloud_sync_url');
         if (savedUrl) setCloudUrl(savedUrl);
@@ -107,9 +116,12 @@ const App: React.FC = () => {
     if (isInitialLoadDone) localStorage.setItem('tour_records', JSON.stringify(records)); 
   }, [records, isInitialLoadDone]);
 
+  // 嚴格按月份分組邏輯，確保不會出現 NaN 或 undefined
   const groupedHistoryByMonth = useMemo(() => {
     const groups: Record<string, TourRecord[]> = {};
-    const sortedRecords = [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const validRecords = filterInvalidRecords(records);
+    const sortedRecords = [...validRecords].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
     sortedRecords.forEach(r => {
       const d = new Date(r.date);
       const year = d.getFullYear();
@@ -138,7 +150,9 @@ const App: React.FC = () => {
       const getResponse = await fetch(`${cloudUrl}?action=get`);
       const cloudData = await getResponse.json();
       if (Array.isArray(cloudData)) {
-        const sorted = cloudData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // 同樣過濾雲端傳回的空行
+        const cleanData = filterInvalidRecords(cloudData);
+        const sorted = cleanData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setRecords(sorted);
         setLastSyncTime(new Date().toLocaleString('ja-JP'));
         if (showAlert) alert(T.syncSuccess);
@@ -146,7 +160,6 @@ const App: React.FC = () => {
     } catch (err) { if (showAlert) alert(T.syncError); } finally { setIsSyncing(false); }
   };
 
-  // Implement the PIN-protected record deletion logic
   const handleDeleteRecord = (id: string) => {
     const pin = prompt(T.deletePasswordPrompt);
     if (pin === DELETE_PIN) {
@@ -230,10 +243,10 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-md:mx-auto pb-44">
+      <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-md mx-auto pb-44">
         {showLogin && (
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6">
-             <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8">
+             <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-300">
                 <div className="w-20 h-20 bg-red-700 rounded-3xl mx-auto flex items-center justify-center text-white shadow-xl">
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 </div>
@@ -258,7 +271,7 @@ const App: React.FC = () => {
             setFormData({ ...formData, revenue: '', guests: '1', duration: 3 });
             alert(T.saveSuccess);
             if (autoSync && cloudUrl) performCloudSync(false, updated);
-          }} className="bg-white p-8 rounded-[3.5rem] shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-10 w-full overflow-hidden max-w-md mx-auto">
+          }} className="bg-white p-8 rounded-[3.5rem] shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-10 w-full overflow-hidden">
             <h2 className="text-2xl font-black font-washi text-slate-900 border-l-8 border-red-700 pl-6 uppercase tracking-tighter">{T.upload}</h2>
             <div className="space-y-6">
               <div className="space-y-2">
@@ -299,7 +312,7 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'dashboard' && isAdmin && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-10 pb-10 w-full overflow-hidden max-w-md mx-auto">
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-10 pb-10 w-full overflow-hidden">
              <div className="flex flex-wrap gap-2">
                 {YEARS.map(y => (
                   <button key={y} onClick={() => setSelectedYear(y)} className={`px-6 py-3 rounded-full font-black text-xs border-2 transition-all ${selectedYear === y ? 'bg-red-700 text-white border-red-700 shadow-lg' : 'bg-white text-slate-300 border-slate-100'}`}>{y}</button>
@@ -310,28 +323,31 @@ const App: React.FC = () => {
                 <div className="flex justify-between items-end mb-4 h-80 px-2 relative z-10">
                   {monthlyData.map((d) => (
                     <div key={d.month} className="flex flex-col items-center flex-1 h-full justify-end relative group">
-                      {/* 數值標籤 */}
+                      {/* 柱狀圖數值直接顯示在柱體上方 (對比需求) */}
                       {d.rev > 0 && (
-                        <div className="absolute bottom-[calc(100%+10px)] flex flex-col items-center z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                           <span className="text-[10px] font-black text-slate-900 whitespace-nowrap bg-white px-2 py-1 rounded-lg shadow-xl border border-slate-100">¥{(d.rev/1000).toFixed(0)}k</span>
+                        <div className="absolute bottom-[calc(height+5px)] mb-1 flex flex-col items-center z-20 pointer-events-none">
+                           <span className="text-[9px] font-black text-slate-900 bg-white/80 px-1 rounded shadow-sm border border-slate-50">¥{(d.rev/1000).toFixed(0)}k</span>
                         </div>
                       )}
                       
-                      {/* 進步/退步標示 */}
+                      {/* 進步/退步標示 (柱體中間或下方顯示趨勢) */}
                       {d.rev > 0 && d.month > 1 && (
-                        <div className="absolute bottom-[calc(height/2)] left-1/2 -translate-x-1/2 z-20 pointer-events-none mb-1">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-20 pointer-events-none -mt-4">
                           {d.diff > 0 ? (
-                            <span className="text-[8px] font-black text-green-600 bg-green-50 px-1 rounded">▲</span>
+                            <div className="flex flex-col items-center">
+                              <span className="text-[10px] font-black text-green-500">▲</span>
+                              <span className="text-[7px] font-black text-green-600 bg-green-50 px-0.5 rounded">+{d.growth.toFixed(0)}%</span>
+                            </div>
                           ) : d.diff < 0 ? (
-                            <span className="text-[8px] font-black text-red-600 bg-red-50 px-1 rounded">▼</span>
+                            <div className="flex flex-col items-center">
+                              <span className="text-[10px] font-black text-red-500">▼</span>
+                              <span className="text-[7px] font-black text-red-600 bg-red-50 px-0.5 rounded">{d.growth.toFixed(0)}%</span>
+                            </div>
                           ) : null}
                         </div>
                       )}
 
                       <div onClick={() => setSelectedMonth(d.month)} className={`w-4/5 rounded-t-full rounded-b-lg transition-all duration-700 cursor-pointer ${selectedMonth === d.month ? 'ring-4 ring-red-700/30 shadow-2xl scale-110 z-10' : 'opacity-40'} ${d.isMax ? 'bg-gradient-to-t from-red-800 to-red-500' : 'bg-slate-900'}`} style={{ height: `${Math.max(d.height, 4)}%` }}>
-                        <div className="w-full h-full flex flex-col items-center pt-2">
-                           <span className="text-[7px] text-white font-black opacity-80">{d.rev > 0 ? (d.rev/1000).toFixed(0) : ''}</span>
-                        </div>
                       </div>
                       <span className={`text-[9px] font-black mt-4 ${selectedMonth === d.month ? 'text-red-700' : 'text-slate-300'}`}>{T.months[d.month]}</span>
                     </div>
@@ -371,14 +387,17 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'history' && isAdmin && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-left-10 pb-10 w-full overflow-hidden max-w-md mx-auto">
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-10 pb-10 w-full overflow-hidden">
              <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter mb-10 ml-2">{T.archives}</h2>
              {Object.keys(groupedHistoryByMonth).length === 0 ? (
                <div className="py-44 text-center text-slate-200 font-black tracking-[0.8em] text-xs uppercase">Empty</div>
              ) : (
                Object.entries(groupedHistoryByMonth).map(([monthKey, monthRecords]) => {
+                 // 這裡需要多加防護，確保 monthKey 正確
+                 if (monthKey.includes('NaN') || monthKey.includes('undefined')) return null;
                  const [y, m] = monthKey.split('-');
-                 const displayMonth = lang === 'ja' ? `${y}年 ${parseInt(m)}月` : `${T.months[parseInt(m)]} ${y}`;
+                 const monthIdx = parseInt(m);
+                 const displayMonth = lang === 'ja' ? `${y}年 ${monthIdx}月` : `${T.months[monthIdx]} ${y}`;
                  return (
                    <div key={monthKey} className="space-y-4">
                       <button 
@@ -401,7 +420,7 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-8 animate-in zoom-in duration-500 pb-10 w-full overflow-hidden max-w-md mx-auto">
+          <div className="space-y-8 animate-in zoom-in duration-500 pb-10 w-full overflow-hidden">
              <div className="bg-white p-12 rounded-[4.5rem] shadow-2xl space-y-12 flex flex-col min-h-[75vh] relative">
                 <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter border-b-4 border-red-700 w-fit pb-2">{T.system}</h2>
                 
@@ -437,7 +456,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <nav className="fixed bottom-8 left-8 right-8 h-24 glass flex justify-around items-center rounded-full shadow-[0_40px_80px_rgba(0,0,0,0.4)] z-50 border border-white/70 px-8 max-w-lg mx-auto">
+      <nav className="fixed bottom-8 left-8 right-8 h-24 glass flex justify-around items-center rounded-full shadow-[0_40px_80px_rgba(0,0,0,0.4)] z-50 border border-white/70 px-8">
         <button onClick={() => handleTabSwitch('upload')} className={`p-6 rounded-full transition-all duration-500 ${activeTab === 'upload' ? 'bg-red-700 text-white -translate-y-8 scale-150 shadow-2xl' : 'text-slate-300'}`}>
           <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
         </button>
