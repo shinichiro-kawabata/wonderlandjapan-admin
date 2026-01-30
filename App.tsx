@@ -1,10 +1,65 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { TourType, TourRecord, Language } from './types';
-import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES } from './constants';
-import RecordCard from './RecordCard'; // 移除 .tsx 擴展名以解決 Vercel 解析錯誤
+import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES, TOUR_ICONS } from './constants';
 import { analyzeRecords } from './services/geminiService';
 
+// --- RecordCard Component (Moved inside to fix module resolution issues once and for all) ---
+const formatDate = (dateStr: string, lang: Language) => {
+  if (!dateStr) return '---';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const weekdaysJa = ['日', '月', '火', '水', '木', '金', '土'];
+  const weekdaysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dow = d.getDay();
+  const weekday = lang === 'ja' ? weekdaysJa[dow] : weekdaysEn[dow];
+  return `${y}/${m}/${day} (${weekday})`;
+};
+
+const RecordCardInternal: React.FC<{ record: TourRecord; lang: Language; onDelete: (id: string) => void; isAdmin?: boolean }> = ({ record, lang, onDelete, isAdmin = false }) => {
+  const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
+  const unit = lang === 'ja' ? '時間' : 'h';
+  return (
+    <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 p-6 mb-5 flex items-center justify-between group transition-all duration-500 hover:shadow-2xl hover:-translate-y-1">
+      <div className="flex items-center space-x-5 flex-1 min-w-0">
+        <div className="p-4 rounded-2xl text-white shadow-lg transform transition-transform group-hover:rotate-3 duration-500 flex-shrink-0" style={{ backgroundColor: TOUR_COLORS[record.type] }}>
+          {TOUR_ICONS[record.type]}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-black text-slate-900 text-base tracking-tight font-washi truncate">
+            {T.tours?.[record.type] || record.type}
+          </h4>
+          <div className="flex items-center space-x-3 mt-1">
+             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{formatDate(record.date, lang)}</p>
+             <span className="text-[9px] bg-amber-100 text-amber-900 px-3 py-1 rounded-full font-black border border-amber-200">
+               {record.guide}
+             </span>
+          </div>
+          <div className="flex gap-2 mt-3">
+            {isAdmin && (
+              <span className="text-[10px] bg-white px-3 py-1.5 rounded-xl text-slate-800 font-black border border-slate-100 shadow-sm">
+                ¥{record.revenue.toLocaleString()}
+              </span>
+            )}
+            <span className="text-[10px] bg-white px-3 py-1.5 rounded-xl text-slate-800 font-black border border-slate-100 shadow-sm">
+              {record.guests} {T.guestUnit}
+            </span>
+          </div>
+        </div>
+      </div>
+      {isAdmin && (
+        <button onClick={(e) => { e.stopPropagation(); onDelete(record.id); }} className="p-4 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+        </button>
+      )}
+    </div>
+  );
+};
+
+// --- Main App Component ---
 const ADMIN_PASSWORD = '2025';
 const DELETE_PIN = '0124';
 
@@ -19,7 +74,6 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [targetTabAfterLogin, setTargetTabAfterLogin] = useState<typeof activeTab | null>(null);
   
-  // 嚴格定義：2025年為起始年
   const [selectedYear, setSelectedYear] = useState(2025);
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
   
@@ -30,7 +84,7 @@ const App: React.FC = () => {
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
   const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
-  const YEARS = [2025, 2026, 2027, 2028, 2029, 2030]; 
+  const YEARS = [2025, 2026, 2027, 2028, 2029, 2030]; // 徹底移除 2024
   const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
   useEffect(() => {
@@ -56,9 +110,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => { 
-    if (isInitialLoadDone) {
-      localStorage.setItem('tour_records', JSON.stringify(records)); 
-    }
+    if (isInitialLoadDone) localStorage.setItem('tour_records', JSON.stringify(records)); 
   }, [records, isInitialLoadDone]);
 
   const performCloudSync = async (showAlert = true, overrideData?: TourRecord[]) => {
@@ -78,11 +130,7 @@ const App: React.FC = () => {
         setLastSyncTime(new Date().toLocaleString('ja-JP'));
         if (showAlert) alert(T.syncSuccess);
       }
-    } catch (err) { 
-      if (showAlert) alert(T.syncError); 
-    } finally { 
-      setIsSyncing(false); 
-    }
+    } catch (err) { if (showAlert) alert(T.syncError); } finally { setIsSyncing(false); }
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -121,16 +169,9 @@ const App: React.FC = () => {
         const d = new Date(r.date);
         return d.getFullYear() === selectedYear && (d.getMonth() + 1) === m;
       });
-      return {
-        month: m,
-        rev: filtered.reduce((acc, r) => acc + r.revenue, 0),
-        pax: filtered.reduce((acc, r) => acc + r.guests, 0),
-        count: filtered.length
-      };
+      return { month: m, rev: filtered.reduce((acc, r) => acc + r.revenue, 0), pax: filtered.reduce((acc, r) => acc + r.guests, 0), count: filtered.length };
     });
-
     const maxRev = Math.max(...result.map(d => d.rev), 1);
-    
     return result.map((d, i) => {
       const prevRev = i > 0 ? result[i-1].rev : 0;
       const growth = prevRev === 0 ? 0 : ((d.rev - prevRev) / prevRev) * 100;
@@ -144,12 +185,7 @@ const App: React.FC = () => {
       if (selectedMonth === 'all') return d.getFullYear() === selectedYear;
       return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
     });
-    return {
-      rev: filtered.reduce((acc, r) => acc + r.revenue, 0),
-      pax: filtered.reduce((acc, r) => acc + r.guests, 0),
-      count: filtered.length,
-      raw: filtered
-    };
+    return { rev: filtered.reduce((acc, r) => acc + r.revenue, 0), pax: filtered.reduce((acc, r) => acc + r.guests, 0), count: filtered.length, raw: filtered };
   }, [records, selectedYear, selectedMonth]);
 
   const handleAiAnalyze = async () => {
@@ -176,9 +212,7 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-             {isAdmin && (
-               <button onClick={handleLogout} className="bg-red-950/50 text-red-500 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-red-900/50 mr-2">{T.logout}</button>
-             )}
+             {isAdmin && <button onClick={handleLogout} className="bg-red-950/50 text-red-500 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-red-900/50 mr-2">{T.logout}</button>}
              <button onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')} className="bg-white/10 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/5">{lang === 'ja' ? 'EN' : 'JA'}</button>
           </div>
         </div>
@@ -212,8 +246,8 @@ const App: React.FC = () => {
             setFormData({ ...formData, revenue: '', guests: '1', duration: 3 });
             alert(T.saveSuccess);
             if (autoSync && cloudUrl) performCloudSync(false, updated);
-          }} className="bg-white p-8 rounded-[3.5rem] shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-10">
-            <h2 className="text-2xl font-black font-washi text-slate-900 border-l-8 border-red-700 pl-6">{T.upload}</h2>
+          }} className="bg-white p-8 rounded-[3rem] shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-10">
+            <h2 className="text-2xl font-black font-washi text-slate-900 border-l-8 border-red-700 pl-6 uppercase tracking-tighter">{T.upload}</h2>
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.date}</label>
@@ -254,164 +288,89 @@ const App: React.FC = () => {
           <div className="space-y-8 animate-in fade-in slide-in-from-right-10 pb-10">
              <div className="flex flex-wrap gap-2">
                 {YEARS.map(y => (
-                  <button key={y} onClick={() => setSelectedYear(y)} className={`px-6 py-3 rounded-full font-black text-xs border-2 transition-all duration-500 ${selectedYear === y ? 'bg-red-700 text-white border-red-700 shadow-xl scale-110' : 'bg-white text-slate-400 border-slate-100 opacity-60'}`}>
-                    {y}
-                  </button>
+                  <button key={y} onClick={() => setSelectedYear(y)} className={`px-6 py-3 rounded-full font-black text-xs border-2 transition-all ${selectedYear === y ? 'bg-red-700 text-white border-red-700 shadow-lg' : 'bg-white text-slate-300 border-slate-100'}`}>{y}</button>
                 ))}
              </div>
-
-             <div className="bg-white p-8 rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden relative">
-                <div className="flex justify-between items-end mb-12 h-64 px-4">
-                  {monthlyData.map((d) => {
-                    const isBeforeStart = selectedYear === 2025 && d.month < 9;
-                    return (
-                      <div key={d.month} className="flex flex-col items-center flex-1 group relative h-full justify-end">
-                        {!isBeforeStart && d.month > 1 && d.rev > 0 && (
-                          <div className={`absolute -top-12 px-2 py-1.5 rounded-full text-[8px] font-black transition-all shadow-md z-10 ${d.growth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {d.growth >= 0 ? '+' : ''}{Math.round(d.growth)}%
-                          </div>
-                        )}
-                        <div 
-                          onClick={() => setSelectedMonth(d.month)}
-                          className={`w-4/5 rounded-full transition-all duration-1000 relative cursor-pointer ${selectedMonth === d.month ? 'ring-4 ring-red-700/30 shadow-2xl scale-125 z-10' : 'opacity-60 hover:opacity-100'} ${isBeforeStart ? 'bg-slate-50 border-2 border-dashed border-slate-200 h-2' : d.isMax ? 'bg-gradient-to-t from-red-800 via-red-700 to-red-500' : 'bg-slate-900'}`}
-                          style={{ height: isBeforeStart ? '8px' : `${Math.max(d.height, 8)}%` }}
-                        >
-                          {d.isMax && !isBeforeStart && <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-amber-500 text-lg animate-bounce drop-shadow-md">👑</div>}
-                        </div>
-                        <span className={`text-[9px] font-black mt-6 transition-colors duration-500 ${selectedMonth === d.month ? 'text-red-700 scale-125' : 'text-slate-300'}`}>{d.month}{T.monthUnit[0]}</span>
-                      </div>
-                    );
-                  })}
+             <div className="bg-white p-8 rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden">
+                <div className="flex justify-between items-end mb-12 h-64 px-2">
+                  {monthlyData.map((d) => (
+                    <div key={d.month} className="flex flex-col items-center flex-1 h-full justify-end">
+                      <div onClick={() => setSelectedMonth(d.month)} className={`w-4/5 rounded-full transition-all duration-700 cursor-pointer ${selectedMonth === d.month ? 'ring-4 ring-red-700/30 shadow-2xl scale-110 z-10' : 'opacity-40'} ${d.isMax ? 'bg-gradient-to-t from-red-800 to-red-500' : 'bg-slate-900'}`} style={{ height: `${Math.max(d.height, 8)}%` }} />
+                      <span className={`text-[9px] font-black mt-4 ${selectedMonth === d.month ? 'text-red-700' : 'text-slate-300'}`}>{d.month}{T.monthUnit[0]}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center justify-between border-t border-slate-50 pt-8 mt-4">
-                   <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 bg-red-700 rounded-full shadow-inner animate-pulse" />
-                      <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">{T.highestRev}</span>
-                   </div>
-                   <button onClick={() => setSelectedMonth('all')} className="text-[11px] font-black text-slate-900 border-b-2 border-red-700 pb-1 uppercase tracking-tighter hover:text-red-700 transition-colors">{T.viewFullYear}</button>
-                </div>
+                <button onClick={() => setSelectedMonth('all')} className="w-full text-[11px] font-black text-slate-900 border-t border-slate-50 pt-6 uppercase tracking-tighter">{T.viewFullYear}</button>
              </div>
-
-             <div className="bg-slate-900 text-white p-12 rounded-[4.5rem] shadow-2xl relative overflow-hidden group border border-white/5">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-red-700/20 rounded-full blur-[100px] -mr-32 -mt-32 group-hover:bg-red-700/30 transition-all duration-1000" />
-                <p className="text-amber-400 text-[10px] font-black uppercase tracking-[0.6em] mb-6">
-                  {selectedYear} • {selectedMonth === 'all' ? T.annualSummary : `${T.monthlyPerformance} (${selectedMonth}${T.monthUnit})`}
-                </p>
-                <div className="flex items-baseline space-x-3 mb-12">
+             <div className="bg-slate-900 text-white p-12 rounded-[4.5rem] shadow-2xl">
+                <p className="text-amber-400 text-[10px] font-black uppercase tracking-[0.6em] mb-6">{selectedYear} • {selectedMonth === 'all' ? T.annualSummary : `${T.monthlyPerformance} (${selectedMonth}${T.monthUnit})`}</p>
+                <div className="flex items-baseline space-x-3 mb-10">
                    <span className="text-xl font-black text-slate-600">¥</span>
-                   <h2 className="text-7xl font-black font-washi tracking-tighter drop-shadow-2xl">{stats.rev.toLocaleString()}</h2>
+                   <h2 className="text-7xl font-black font-washi tracking-tighter">{stats.rev.toLocaleString()}</h2>
                 </div>
-                <div className="grid grid-cols-3 gap-5">
-                   <div className="text-center p-5 bg-white/5 rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-inner">
-                      <p className="text-[9px] text-slate-500 font-black mb-1 uppercase tracking-widest">{T.growth}</p>
-                      <p className={`text-xl font-black ${selectedMonth !== 'all' && (monthlyData[Number(selectedMonth)-1]?.growth || 0) < 0 ? 'text-red-400' : 'text-white'}`}>
-                        {selectedMonth === 'all' ? '---' : `${Math.round(monthlyData[Number(selectedMonth)-1]?.growth || 0)}%`}
-                      </p>
-                   </div>
-                   <div className="text-center p-5 bg-white/5 rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-inner">
-                      <p className="text-[9px] text-slate-500 font-black mb-1 uppercase tracking-widest">{T.guests}</p>
+                <div className="grid grid-cols-2 gap-5">
+                   <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                      <p className="text-[9px] text-slate-500 font-black mb-1 uppercase">{T.guests}</p>
                       <p className="text-xl font-black">{stats.pax}</p>
                    </div>
-                   <div className="text-center p-5 bg-white/5 rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-inner">
-                      <p className="text-[9px] text-slate-500 font-black mb-1 uppercase tracking-widest">TOURS</p>
+                   <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
+                      <p className="text-[9px] text-slate-500 font-black mb-1 uppercase">TOURS</p>
                       <p className="text-xl font-black">{stats.count}</p>
                    </div>
                 </div>
              </div>
-
-             <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-slate-100 relative">
-                <div className="flex items-center space-x-5 mb-10">
-                   <div className="w-16 h-16 bg-red-700 rounded-3xl flex items-center justify-center text-white shadow-xl rotate-3">
-                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
-                   </div>
-                   <h3 className="text-2xl font-black font-washi text-slate-900 tracking-tighter uppercase">{T.aiInsights}</h3>
-                </div>
-                <div className="text-[13px] leading-[2.4] text-slate-600 font-washi whitespace-pre-wrap min-h-[220px] bg-slate-50 p-10 rounded-[3rem] border border-slate-100 shadow-inner">
-                  {aiInsight || (selectedYear === 2025 && selectedMonth !== 'all' && selectedMonth < 9 
-                    ? T.preLaunchDesc
-                    : T.aiPlaceholder)}
-                </div>
-                <button onClick={handleAiAnalyze} disabled={isAnalyzing || (selectedYear === 2025 && selectedMonth !== 'all' && selectedMonth < 9)} className="w-full bg-slate-900 text-white font-black py-7 rounded-full text-[11px] uppercase tracking-[0.3em] mt-10 active:scale-95 disabled:opacity-20 shadow-2xl transition-all">
-                  {isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn}
-                </button>
+             <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl relative">
+                <h3 className="text-2xl font-black font-washi text-slate-900 mb-8 uppercase tracking-tighter">{T.aiInsights}</h3>
+                <div className="text-[13px] leading-[2.4] text-slate-600 font-washi whitespace-pre-wrap min-h-[200px] bg-slate-50 p-8 rounded-3xl border border-slate-100">{aiInsight || T.aiPlaceholder}</div>
+                <button onClick={handleAiAnalyze} disabled={isAnalyzing} className="w-full bg-slate-900 text-white font-black py-7 rounded-full text-[11px] uppercase tracking-[0.3em] mt-10 active:scale-95 disabled:opacity-30">{isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn}</button>
              </div>
           </div>
         )}
 
         {activeTab === 'history' && isAdmin && (
           <div className="space-y-6 animate-in fade-in slide-in-from-left-10 pb-10">
-             <div className="flex justify-between items-end mb-8 px-2 border-b-4 border-slate-100 pb-4">
-                <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter">{T.archives}</h2>
-                <button onClick={() => {
-                   const headers = ['Date', 'Type', 'Guide', 'Revenue', 'Guests'];
-                   const csv = "data:text/csv;charset=utf-8," + [headers, ...records.map(r => [r.date, r.type, r.guide, r.revenue, r.guests])].map(e => e.join(",")).join("\n");
-                   const link = document.createElement("a");
-                   link.setAttribute("href", encodeURI(csv));
-                   link.setAttribute("download", `wonderland_full_report.csv`);
-                   link.click();
-                }} className="text-[11px] font-black text-slate-900 border-2 border-slate-900 px-6 py-3 rounded-full uppercase tracking-widest transition-all hover:bg-slate-900 hover:text-white shadow-sm">{T.exportCSV}</button>
-             </div>
-             {records.length === 0 ? (
-               <div className="py-40 text-center text-slate-200 font-black uppercase tracking-[0.8em] text-xs">ARCHIVE EMPTY</div>
-             ) : (
-               records.map(r => <RecordCard key={r.id} record={r} lang={lang} onDelete={handleDeleteRecord} isAdmin={isAdmin} />)
-             )}
+             <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter mb-8 ml-2">{T.archives}</h2>
+             {records.length === 0 ? <div className="py-40 text-center text-slate-200 font-black tracking-[0.8em] text-xs uppercase">Empty</div> : records.map(r => <RecordCardInternal key={r.id} record={r} lang={lang} onDelete={handleDeleteRecord} isAdmin={isAdmin} />)}
           </div>
         )}
 
         {activeTab === 'settings' && isAdmin && (
-          <div className="space-y-8 animate-in fade-in zoom-in duration-500 pb-10">
-             <div className="bg-white p-12 rounded-[4.5rem] shadow-2xl space-y-10 border border-slate-50 relative">
-                <h2 className="text-3xl font-black font-washi text-slate-900 border-b-4 border-red-700 w-fit pb-2 uppercase tracking-tighter">{T.system}</h2>
-                <div className="space-y-4">
-                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-2">Cloud API Endpoint</label>
-                   <input type="text" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="https://script.google.com/..." className="w-full p-7 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] text-xs font-bold outline-none focus:border-red-700 transition-all shadow-inner" />
-                </div>
-                <div className="flex items-center justify-between p-8 bg-slate-50 rounded-[3rem] border border-slate-100 shadow-sm">
-                   <div>
-                      <h4 className="font-black text-slate-900 text-[11px] uppercase tracking-widest">{T.instantUpload}</h4>
-                      <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-widest">{T.autoSyncDesc}</p>
-                   </div>
-                   <button onClick={() => setAutoSync(!autoSync)} className={`w-18 h-11 rounded-full transition-all flex items-center px-1.5 ${autoSync ? 'bg-red-700' : 'bg-slate-200'}`}>
-                      <div className={`w-8 h-8 bg-white rounded-full shadow-lg transform transition-transform duration-500 ${autoSync ? 'translate-x-7' : 'translate-x-0'}`} />
-                   </button>
-                </div>
-                <button onClick={() => performCloudSync()} disabled={isSyncing} className="w-full bg-slate-900 text-white font-black py-7 rounded-[3rem] text-[11px] uppercase tracking-[0.4em] active:scale-95 disabled:opacity-30 shadow-2xl transition-all">
-                   {isSyncing ? 'ACCESSING CLOUD...' : T.forceSync}
-                </button>
-                {lastSyncTime && <p className="text-center text-[10px] font-black text-slate-300 uppercase tracking-widest font-mono">{T.lastSync}: {lastSyncTime}</p>}
+          <div className="space-y-8 animate-in zoom-in duration-500 pb-10">
+             <div className="bg-white p-12 rounded-[4rem] shadow-2xl space-y-10 relative">
+                <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter border-b-4 border-red-700 w-fit pb-2">{T.system}</h2>
+                <input type="text" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="API Endpoint..." className="w-full p-7 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] text-xs font-bold outline-none focus:border-red-700" />
+                <button onClick={() => performCloudSync()} disabled={isSyncing} className="w-full bg-slate-900 text-white font-black py-7 rounded-[2.5rem] text-[11px] uppercase tracking-[0.4em]">{isSyncing ? 'SYNCING...' : T.forceSync}</button>
                 
-                {/* Benjamin Tang 明星級藝術簽名區 (修復版) */}
-                <div className="mt-24 pt-12 border-t-2 border-slate-50 text-center animate-in fade-in duration-1000">
-                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.6em] mb-4">Masterfully Crafted by</p>
-                   <div className="relative inline-block group">
-                      <p className="text-6xl font-signature text-slate-900 mb-8 px-6 transform -rotate-2 group-hover:rotate-0 transition-all duration-700 cursor-default select-none bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Benjamin Tang</p>
-                      <div className="absolute -bottom-2 left-0 w-full h-1 bg-red-700/10 rounded-full blur-sm" />
+                {/* 🌟 Benjamin Tang 精品級藝術簽名區 🌟 */}
+                <div className="mt-28 pt-16 border-t-2 border-slate-50 text-center relative overflow-hidden">
+                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.8em] mb-6">Designed & Engineered by</p>
+                   <div className="inline-block relative">
+                      <p className="text-6xl font-signature bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-transparent transform -rotate-3 hover:rotate-0 transition-transform duration-700 select-none px-6">Benjamin Tang</p>
+                      <div className="absolute -bottom-3 left-0 w-full h-1 bg-red-700/5 blur-sm" />
                    </div>
-                   <div className="flex items-center justify-center space-x-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.6em] mt-6 opacity-40">
-                      <span className="text-sm">©</span>
-                      <span>WonderlandJapan Admin Core v2.0</span>
+                   <div className="mt-8 flex items-center justify-center space-x-3 opacity-30">
+                      <div className="w-2 h-2 bg-red-700 rounded-full animate-ping" />
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">WonderlandJapan Admin Core v2.5</p>
                    </div>
-                   <div className="mt-2 text-[8px] font-bold text-slate-200 uppercase tracking-[0.2em]">All Rights Reserved 2025</div>
+                   <p className="mt-4 text-[8px] font-bold text-slate-200 uppercase tracking-widest">© 2025 All Rights Reserved</p>
                 </div>
-
-                <button onClick={handleLogout} className="w-full py-6 mt-12 text-red-400 text-[11px] font-black uppercase tracking-[0.3em] hover:bg-red-50 rounded-full transition-all border-2 border-transparent hover:border-red-100">{T.endSession}</button>
+                <button onClick={handleLogout} className="w-full py-6 mt-12 text-red-400 text-[10px] font-black uppercase tracking-[0.3em] hover:bg-red-50 rounded-full transition-all">Sign Out</button>
              </div>
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-6 left-6 right-6 h-22 glass flex justify-around items-center rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.15)] z-50 border border-white/60 px-6">
-        <button onClick={() => handleTabSwitch('upload')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'upload' ? 'bg-red-700 text-white -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300 hover:text-slate-500'}`}>
+      <nav className="fixed bottom-6 left-6 right-6 h-22 glass flex justify-around items-center rounded-[3rem] shadow-2xl z-50 border border-white/60 px-6">
+        <button onClick={() => handleTabSwitch('upload')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'upload' ? 'bg-red-700 text-white -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300'}`}>
           <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
         </button>
-        <button onClick={() => handleTabSwitch('dashboard')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'dashboard' ? 'bg-slate-900 text-amber-400 -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300 hover:text-slate-500'}`}>
+        <button onClick={() => handleTabSwitch('dashboard')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'dashboard' ? 'bg-slate-900 text-amber-400 -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300'}`}>
           <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" /></svg>
         </button>
-        <button onClick={() => handleTabSwitch('history')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'history' ? 'bg-slate-900 text-amber-400 -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300 hover:text-slate-500'}`}>
+        <button onClick={() => handleTabSwitch('history')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'history' ? 'bg-slate-900 text-amber-400 -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300'}`}>
           <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </button>
-        <button onClick={() => handleTabSwitch('settings')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'settings' ? 'bg-slate-900 text-amber-400 -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300 hover:text-slate-500'}`}>
+        <button onClick={() => handleTabSwitch('settings')} className={`p-5 rounded-full transition-all duration-500 ${activeTab === 'settings' ? 'bg-slate-900 text-amber-400 -translate-y-6 scale-125 shadow-2xl' : 'text-slate-300'}`}>
           <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37.996.608 2.296.07 2.572-1.065z" /></svg>
         </button>
       </nav>
