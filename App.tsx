@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { TourType, TourRecord, Language } from './types';
 import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES } from './constants';
-import RecordCard from './RecordCard.tsx'; // 明確路徑，解決建置解析錯誤
+import RecordCard from './RecordCard'; // 移除 .tsx 擴展名以解決 Vercel 解析錯誤
 import { analyzeRecords } from './services/geminiService';
 
 const ADMIN_PASSWORD = '2025';
@@ -19,7 +19,7 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [targetTabAfterLogin, setTargetTabAfterLogin] = useState<typeof activeTab | null>(null);
   
-  // 核心邏輯：嚴格鎖定 2025 年開始
+  // 嚴格定義：2025年為起始年
   const [selectedYear, setSelectedYear] = useState(2025);
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
   
@@ -30,7 +30,7 @@ const App: React.FC = () => {
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
   const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
-  const YEARS = [2025, 2026, 2027, 2028, 2029, 2030]; // 徹底移除 2024
+  const YEARS = [2025, 2026, 2027, 2028, 2029, 2030]; 
   const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
   useEffect(() => {
@@ -49,7 +49,6 @@ const App: React.FC = () => {
         if (savedAdmin === 'true') setIsAdmin(true);
         setIsInitialLoadDone(true);
       } catch (e) {
-        console.error("Storage Initialization Failed", e);
         setIsInitialLoadDone(true);
       }
     };
@@ -158,9 +157,8 @@ const App: React.FC = () => {
     setIsAnalyzing(true);
     setAiInsight(null);
     try {
-      const ctx = selectedMonth === 'all' ? `${selectedYear}${T.yearly}` : `${selectedYear}${T.date}${selectedMonth}${T.monthUnit}`;
       const insight = await analyzeRecords(stats.raw, lang);
-      setAiInsight(`【${ctx}】\n\n${insight}`);
+      setAiInsight(insight);
     } catch (err) { setAiInsight(T.aiError); } finally { setIsAnalyzing(false); }
   };
 
@@ -186,7 +184,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-6 z-10 overflow-y-auto no-scrollbar animate-in fade-in duration-500">
+      <main className="flex-1 p-6 z-10 overflow-y-auto no-scrollbar">
         {showLogin && (
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6">
              <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-300">
@@ -383,16 +381,16 @@ const App: React.FC = () => {
                 </button>
                 {lastSyncTime && <p className="text-center text-[10px] font-black text-slate-300 uppercase tracking-widest font-mono">{T.lastSync}: {lastSyncTime}</p>}
                 
-                {/* Benjamin Tang 明星級藝術簽名區 */}
+                {/* Benjamin Tang 明星級藝術簽名區 (修復版) */}
                 <div className="mt-24 pt-12 border-t-2 border-slate-50 text-center animate-in fade-in duration-1000">
                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.6em] mb-4">Masterfully Crafted by</p>
                    <div className="relative inline-block group">
-                      <p className="text-6xl font-signature text-slate-900 mb-8 px-6 transform -rotate-2 group-hover:rotate-0 transition-all duration-700 cursor-default select-none">Benjamin Tang</p>
+                      <p className="text-6xl font-signature text-slate-900 mb-8 px-6 transform -rotate-2 group-hover:rotate-0 transition-all duration-700 cursor-default select-none bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Benjamin Tang</p>
                       <div className="absolute -bottom-2 left-0 w-full h-1 bg-red-700/10 rounded-full blur-sm" />
                    </div>
                    <div className="flex items-center justify-center space-x-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.6em] mt-6 opacity-40">
                       <span className="text-sm">©</span>
-                      <span>WonderlandJapan Admin Core</span>
+                      <span>WonderlandJapan Admin Core v2.0</span>
                    </div>
                    <div className="mt-2 text-[8px] font-bold text-slate-200 uppercase tracking-[0.2em]">All Rights Reserved 2025</div>
                 </div>
