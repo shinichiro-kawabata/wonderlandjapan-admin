@@ -83,12 +83,12 @@ const App: React.FC = () => {
   const YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
   const MONTHS_LIST = Array.from({ length: 12 }, (_, i) => i + 1);
 
-  // 核心邏輯：過濾掉空數據（revenue 和 guests 都是 0 的紀錄）以及無效日期
-  const filterInvalidRecords = (raw: any[]): TourRecord[] => {
+  // 強化數據清理邏輯：過濾掉空行、0數據以及非法日期
+  const cleanRecords = (raw: any[]): TourRecord[] => {
     return raw.filter(r => {
-      const hasContent = Number(r.revenue) > 0 || Number(r.guests) > 0;
-      const hasDate = r.date && !isNaN(new Date(r.date).getTime());
-      return hasContent && hasDate;
+      const isValidDate = r.date && !isNaN(new Date(r.date).getTime());
+      const hasValue = (Number(r.revenue) > 0 || Number(r.guests) > 0);
+      return isValidDate && hasValue;
     });
   };
 
@@ -98,7 +98,7 @@ const App: React.FC = () => {
         const savedRecords = localStorage.getItem('tour_records');
         if (savedRecords) {
           const parsed = JSON.parse(savedRecords);
-          if (Array.isArray(parsed)) setRecords(filterInvalidRecords(parsed));
+          if (Array.isArray(parsed)) setRecords(cleanRecords(parsed));
         }
         const savedUrl = localStorage.getItem('cloud_sync_url');
         if (savedUrl) setCloudUrl(savedUrl);
@@ -116,10 +116,9 @@ const App: React.FC = () => {
     if (isInitialLoadDone) localStorage.setItem('tour_records', JSON.stringify(records)); 
   }, [records, isInitialLoadDone]);
 
-  // 嚴格按月份分組邏輯，確保不會出現 NaN 或 undefined
   const groupedHistoryByMonth = useMemo(() => {
     const groups: Record<string, TourRecord[]> = {};
-    const validRecords = filterInvalidRecords(records);
+    const validRecords = cleanRecords(records);
     const sortedRecords = [...validRecords].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
     sortedRecords.forEach(r => {
@@ -150,9 +149,8 @@ const App: React.FC = () => {
       const getResponse = await fetch(`${cloudUrl}?action=get`);
       const cloudData = await getResponse.json();
       if (Array.isArray(cloudData)) {
-        // 同樣過濾雲端傳回的空行
-        const cleanData = filterInvalidRecords(cloudData);
-        const sorted = cleanData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const sanitized = cleanRecords(cloudData);
+        const sorted = sanitized.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setRecords(sorted);
         setLastSyncTime(new Date().toLocaleString('ja-JP'));
         if (showAlert) alert(T.syncSuccess);
@@ -323,25 +321,25 @@ const App: React.FC = () => {
                 <div className="flex justify-between items-end mb-4 h-80 px-2 relative z-10">
                   {monthlyData.map((d) => (
                     <div key={d.month} className="flex flex-col items-center flex-1 h-full justify-end relative group">
-                      {/* 柱狀圖數值直接顯示在柱體上方 (對比需求) */}
+                      {/* 直接顯示在柱體上方的數值 (優化觀看) */}
                       {d.rev > 0 && (
                         <div className="absolute bottom-[calc(height+5px)] mb-1 flex flex-col items-center z-20 pointer-events-none">
-                           <span className="text-[9px] font-black text-slate-900 bg-white/80 px-1 rounded shadow-sm border border-slate-50">¥{(d.rev/1000).toFixed(0)}k</span>
+                           <span className="text-[8px] font-black text-slate-900 bg-white/90 px-1 rounded shadow-sm border border-slate-100">¥{(d.rev/1000).toFixed(0)}k</span>
                         </div>
                       )}
                       
-                      {/* 進步/退步標示 (柱體中間或下方顯示趨勢) */}
+                      {/* 進步/退步標示 (置中顯示) */}
                       {d.rev > 0 && d.month > 1 && (
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 z-20 pointer-events-none -mt-4">
+                        <div className="absolute top-[40%] left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                           {d.diff > 0 ? (
                             <div className="flex flex-col items-center">
-                              <span className="text-[10px] font-black text-green-500">▲</span>
-                              <span className="text-[7px] font-black text-green-600 bg-green-50 px-0.5 rounded">+{d.growth.toFixed(0)}%</span>
+                              <span className="text-[12px] font-black text-green-500 drop-shadow-sm">▲</span>
+                              <span className="text-[7px] font-black text-green-700 bg-green-50/80 px-0.5 rounded">+{d.growth.toFixed(0)}%</span>
                             </div>
                           ) : d.diff < 0 ? (
                             <div className="flex flex-col items-center">
-                              <span className="text-[10px] font-black text-red-500">▼</span>
-                              <span className="text-[7px] font-black text-red-600 bg-red-50 px-0.5 rounded">{d.growth.toFixed(0)}%</span>
+                              <span className="text-[12px] font-black text-red-500 drop-shadow-sm">▼</span>
+                              <span className="text-[7px] font-black text-red-700 bg-red-50/80 px-0.5 rounded">{d.growth.toFixed(0)}%</span>
                             </div>
                           ) : null}
                         </div>
@@ -360,9 +358,10 @@ const App: React.FC = () => {
                 <p className="text-amber-400 text-[11px] font-black uppercase tracking-[0.5em] mb-6">
                   {selectedYear} • {selectedMonth === 'all' ? T.annualSummary : `${T.monthlyPerformance} (${T.months[selectedMonth]})`}
                 </p>
-                <div className="flex items-baseline space-x-3 mb-10">
+                <div className="flex items-baseline space-x-3 mb-10 overflow-hidden">
                    <span className="text-xl font-black text-slate-600">¥</span>
-                   <h2 className="text-7xl font-black font-washi tracking-tighter truncate">{stats.rev.toLocaleString()}</h2>
+                   {/* 修正：字體大小調降至 text-5xl，並加入 break-all 防止超長溢出 */}
+                   <h2 className="text-5xl font-black font-washi tracking-tighter break-all">{stats.rev.toLocaleString()}</h2>
                 </div>
                 <div className="grid grid-cols-2 gap-5">
                    <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
@@ -393,7 +392,7 @@ const App: React.FC = () => {
                <div className="py-44 text-center text-slate-200 font-black tracking-[0.8em] text-xs uppercase">Empty</div>
              ) : (
                Object.entries(groupedHistoryByMonth).map(([monthKey, monthRecords]) => {
-                 // 這裡需要多加防護，確保 monthKey 正確
+                 // 防禦 NaN 或 undefined 顯示
                  if (monthKey.includes('NaN') || monthKey.includes('undefined')) return null;
                  const [y, m] = monthKey.split('-');
                  const monthIdx = parseInt(m);
@@ -461,7 +460,7 @@ const App: React.FC = () => {
           <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
         </button>
         <button onClick={() => handleTabSwitch('dashboard')} className={`p-6 rounded-full transition-all duration-500 ${activeTab === 'dashboard' ? 'bg-slate-900 text-amber-400 -translate-y-8 scale-150 shadow-2xl' : 'text-slate-300'}`}>
-          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" /></svg>
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 20h2v-8H7v8zm5 0h2v-5h-2v5zm5 0h2v-10h-2v10z" /></svg>
         </button>
         <button onClick={() => handleTabSwitch('history')} className={`p-6 rounded-full transition-all duration-500 ${activeTab === 'history' ? 'bg-slate-900 text-amber-400 -translate-y-8 scale-150 shadow-2xl' : 'text-slate-300'}`}>
           <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

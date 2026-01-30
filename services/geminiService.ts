@@ -7,7 +7,8 @@ export async function analyzeRecords(records: TourRecord[], lang: Language) {
     return lang === 'ja' ? '分析データがありません。' : 'No data to analyze.';
   }
   
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  // 使用靜態環境變數初始化
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const dataSummary = records.map(r => ({
@@ -27,21 +28,22 @@ export async function analyzeRecords(records: TourRecord[], lang: Language) {
       2. Guide Performance & Resource Allocation.
       3. Practical Marketing & Upselling Strategies.
       
-      Keep it professional, sharp, and data-driven.
+      Keep it professional, sharp, and data-driven. Use bullet points.
     `;
 
+    // 採用更穩定的 contents 陣列格式
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         temperature: 0.7,
         topP: 0.95,
       }
     });
 
-    return response.text || (lang === 'ja' ? '診断エラー' : 'Analysis error.');
+    return response.text || (lang === 'ja' ? '分析エラーが発生しました。' : 'Analysis failed.');
   } catch (error: any) {
-    console.error("Gemini CSO Error:", error);
+    console.error("Gemini Error:", error);
     return lang === 'ja' ? `エラー: ${error.message}` : `AI Consultant Error: ${error.message}`;
   }
 }
