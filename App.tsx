@@ -219,27 +219,22 @@ const App: React.FC = () => {
   };
 
   const handleAiAnalyze = async () => {
-    if (records.length === 0) return;
+    if (records.length === 0) {
+      setAiInsight(T.noRecords);
+      return;
+    }
     setIsAnalyzing(true);
     setAiInsight(null);
     try {
       const insight = await analyzeRecords(records, lang);
+      // 直接顯示 Service 回傳的字串（可能是錯誤訊息，也可能是分析結果）
       setAiInsight(insight || T.aiError);
-    } catch (err) { setAiInsight(T.aiError); } finally { setIsAnalyzing(false); }
-  };
-
-  const handleDownloadCSV = () => {
-    if (records.length === 0) return;
-    const headers = ['Date', 'Type', 'Guide', 'Revenue', 'Guests', 'Duration'].join(',');
-    const rows = records.map(r => [r.date, T.tours?.[r.type] || r.type, r.guide, r.revenue, r.guests, r.duration].join(','));
-    const csvContent = "\uFEFF" + [headers, ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `report_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    } catch (err) { 
+      console.error(err);
+      setAiInsight(T.aiError); 
+    } finally { 
+      setIsAnalyzing(false); 
+    }
   };
 
   const statsForSelectedYear = useMemo(() => {
@@ -261,47 +256,15 @@ const App: React.FC = () => {
 
   const chartData = useMemo(() => statsForSelectedYear.months.map(m => ({ label: `${m.month}`, value: m.rev })), [statsForSelectedYear]);
 
-  // 更新邏輯：顯示「選定年份中，當前月份或最後有數據月份」的營收
   const currentMonthValue = useMemo(() => {
     const today = new Date();
     const currentYear = today.getFullYear();
-    const currentMonthIndex = today.getMonth(); // 0-11
-    
-    // 如果是看今年，直接抓當月
-    if (selectedYear === currentYear) {
-      return statsForSelectedYear.months[currentMonthIndex].rev;
-    }
-    
-    // 如果是看往年，找最後一個有營收的月份（通常是 12 月或最後一筆數據所在月）
+    const currentMonthIndex = today.getMonth(); 
+    if (selectedYear === currentYear) return statsForSelectedYear.months[currentMonthIndex].rev;
     const monthsWithRev = statsForSelectedYear.months.filter(m => m.rev > 0);
     if (monthsWithRev.length > 0) return monthsWithRev[monthsWithRev.length - 1].rev;
-    
     return 0;
   }, [statsForSelectedYear, selectedYear]);
-
-  const groupedHistory = useMemo(() => {
-    const groups: Record<string, { totalRev: number, totalPax: number, items: TourRecord[] }> = {};
-    records.forEach(r => {
-      const d = new Date(r.date);
-      if (isNaN(d.getTime())) return;
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const monthKey = `${y}-${m}`;
-      
-      if (!groups[monthKey]) groups[monthKey] = { totalRev: 0, totalPax: 0, items: [] };
-      groups[monthKey].totalRev += r.revenue;
-      groups[monthKey].totalPax += r.guests;
-      groups[monthKey].items.push(r);
-    });
-    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [records]);
-
-  const handleSafeDelete = (id: string) => {
-    if (!isAdmin) return;
-    if (window.confirm(lang === 'ja' ? '削除しますか？' : 'Delete?')) {
-      setRecords(prev => prev.filter(x => x.id !== id));
-    }
-  };
 
   const guestOptions = useMemo(() => {
     const unit = T.guestUnit || (lang === 'ja' ? '名' : 'PAX');
@@ -333,7 +296,7 @@ const App: React.FC = () => {
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-300">
              <div className="bg-white w-full max-w-sm rounded-[3.5rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-500">
                 <div className="bg-red-700 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto shadow-xl">
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                 </div>
                 <h2 className="text-2xl font-black font-washi text-slate-900">{lang === 'ja' ? '管理者認証' : 'Admin PIN'}</h2>
                 <form onSubmit={handleLogin} className="space-y-6">
@@ -406,85 +369,12 @@ const App: React.FC = () => {
                 <GrowthChart data={chartData} lang={lang} />
                 <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em] text-center mt-6 leading-relaxed whitespace-pre-wrap">{T.chartFootnote}</p>
              </div>
-             <div className="grid grid-cols-2 gap-5">
-               {statsForSelectedYear.months.map(m => (
-                 <div key={m.month} className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-2xl hover:-translate-y-1 transition-all group">
-                    <span className="text-[11px] font-black text-slate-300 group-hover:text-red-700 transition-colors uppercase tracking-[0.2em] font-washi">{m.month}{T.monthUnit}</span>
-                    <p className="text-2xl font-black text-slate-900 leading-none mb-2 tracking-tight">¥{m.rev.toLocaleString()}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{m.pax} {T.guestUnit || (lang === 'ja' ? '名' : 'PAX')}</p>
-                 </div>
-               ))}
-             </div>
              <div className="bg-slate-900 text-white p-9 rounded-[3.5rem] shadow-2xl relative border border-white/5">
                 <h3 className="text-lg font-black font-washi mb-6 text-amber-400">{T.aiInsights}</h3>
                 <div className="text-xs leading-[2] opacity-70 font-washi whitespace-pre-wrap min-h-[120px] prose prose-invert max-w-none">
                   {aiInsight || T.aiPlaceholder}
                 </div>
-                <button onClick={handleAiAnalyze} disabled={isAnalyzing || records.length === 0} className="w-full bg-red-700 text-white font-black py-5 rounded-full text-[10px] uppercase tracking-[0.3em] mt-10 active:scale-95 disabled:opacity-30"> {isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn} </button>
-             </div>
-          </div>
-        )}
-
-        {activeTab === 'history' && isAdmin && (
-          <div className="space-y-12 animate-in fade-in slide-in-from-left-8 duration-700">
-             {groupedHistory.length === 0 ? (
-               <div className="py-32 text-center opacity-20"><p className="font-black tracking-[0.5em] font-washi uppercase">{T.noRecords}</p></div>
-             ) : (
-               <>
-                 <div className="flex justify-between items-center px-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{records.length} {T.history}</p>
-                    <button onClick={handleDownloadCSV} className="text-[10px] font-black bg-slate-900 text-white px-5 py-2.5 rounded-full uppercase tracking-widest shadow-xl active:scale-95 transition-all">{T.downloadCSV}</button>
-                 </div>
-                 {groupedHistory.map(([monthKey, group]) => {
-                   const parts = monthKey.split('-');
-                   if (parts.length < 2) return null;
-                   const year = parts[0];
-                   const month = parts[1];
-                   const headerDisplay = lang === 'ja' 
-                    ? `${year}年 ${parseInt(month)}月` 
-                    : `${year} - ${parseInt(month)}`;
-
-                   return (
-                     <div key={monthKey} className="space-y-6">
-                        <div className="sticky top-24 z-10 bg-slate-100/80 backdrop-blur-md px-7 py-5 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center justify-between">
-                           <div>
-                              <h3 className="text-xl font-black font-washi text-slate-900">{headerDisplay}</h3>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{group.items.length} {T.history}</p>
-                           </div>
-                           <div className="text-right">
-                              <p className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1">{T.revenue.toUpperCase()}</p>
-                              <p className="text-xl font-black text-slate-900">¥{group.totalRev.toLocaleString()}</p>
-                           </div>
-                        </div>
-                        <div className="space-y-5">
-                           {group.items.map(r => <RecordCard key={r.id} record={r} lang={lang} onDelete={handleSafeDelete} isAdmin={isAdmin} />)}
-                        </div>
-                     </div>
-                   );
-                 })}
-               </>
-             )}
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
-          <div className="bg-white p-9 rounded-[3.5rem] shadow-2xl border-4 border-slate-50 animate-in fade-in zoom-in duration-500">
-             <h3 className="text-sm font-black font-washi mb-6 uppercase tracking-widest text-slate-900">{T.dataSync}</h3>
-             <div className="space-y-6">
-                <div className="space-y-3">
-                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">{T.syncUrlLabel}</label>
-                   <input type="text" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} className="w-full p-5 bg-slate-50 rounded-2xl font-bold text-xs border-2 border-slate-200 outline-none focus:border-red-700" placeholder="https://script.google.com/..." />
-                </div>
-                <div className="p-5 bg-slate-50 rounded-[2rem] border-2 border-slate-100 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">{T.autoSync}</span>
-                    <button onClick={() => setAutoSync(!autoSync)} className={`w-14 h-7 rounded-full transition-all relative ${autoSync ? 'bg-green-500 shadow-lg shadow-green-900/20' : 'bg-slate-300'}`}>
-                       <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-md ${autoSync ? 'left-8' : 'left-1'}`}></div>
-                    </button>
-                  </div>
-                </div>
-                <button onClick={() => performCloudSync(true)} disabled={isSyncing || !cloudUrl} className="w-full bg-slate-900 text-white p-6 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] active:scale-95 disabled:opacity-20 shadow-2xl"> {isSyncing ? 'SYNCING...' : T.syncNow} </button>
-                {cloudUrl && <p className="text-[9px] text-slate-400 font-bold text-center uppercase tracking-widest">{T.lastSync}: {lastSyncTime || '---'}</p>}
+                <button onClick={handleAiAnalyze} disabled={isAnalyzing} className="w-full bg-red-700 text-white font-black py-5 rounded-full text-[10px] uppercase tracking-[0.3em] mt-10 active:scale-95 disabled:opacity-30"> {isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn} </button>
              </div>
           </div>
         )}
