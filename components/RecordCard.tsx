@@ -69,7 +69,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, isAdmin
       </div>
       {isAdmin && (
         <button 
-          onClick={() => onDelete(record.id)}
+          onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}
           className="p-5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-[1.5rem] transition-all flex-shrink-0"
         >
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
