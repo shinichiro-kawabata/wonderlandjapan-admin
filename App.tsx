@@ -226,11 +226,11 @@ const App: React.FC = () => {
 
   return (
     <div className="fixed inset-0 w-full h-full flex flex-col overflow-hidden select-none" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
-      <header className="p-8 pt-14 rounded-b-[3rem] shadow-2xl z-20 bg-slate-900 text-white shrink-0 border-b border-white/10">
+      <header className="p-4 md:p-8 pt-10 md:pt-14 rounded-b-[2rem] md:rounded-b-[3rem] shadow-2xl z-20 bg-slate-900 text-white shrink-0 border-b border-white/10">
         <div className="flex justify-between items-center max-w-5xl mx-auto w-full">
-          <div className="flex items-center space-x-6">
-            <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/20"> 
-              <WonderlandLogo className="w-10 h-10 text-amber-400" /> 
+          <div className="flex items-center space-x-4 md:space-x-6">
+            <div className="bg-white/10 p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-md border border-white/20"> 
+              <WonderlandLogo className="w-8 h-8 md:w-10 md:h-10 text-amber-400" /> 
             </div>
             <div>
               <h1 className="text-2xl font-serif-luxury font-light leading-none tracking-widest uppercase">WONDERLAND</h1>
@@ -253,7 +253,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-5xl mx-auto pb-44">
+      <main className="flex-1 p-4 md:p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-5xl mx-auto pb-32 md:pb-44">
         {showLogin && (
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6">
              <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-300">
@@ -273,9 +273,9 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'upload' && (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
-            <div className="bg-white p-12 rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden">
-               <div className="flex items-center justify-between border-b border-slate-100 pb-8 mb-10">
+          <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
+            <div className="bg-white p-6 md:p-12 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+               <div className="flex items-center justify-between border-b border-slate-100 pb-4 md:pb-8 mb-6 md:mb-10">
                 <div className="flex items-center space-x-4">
                   <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
                   <h2 className="text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.newRecord}</h2>
@@ -568,15 +568,12 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'history' && isAdmin && (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
-            <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-slate-100">
-               <div className="flex items-center justify-between border-b border-slate-100 pb-8 mb-10">
+          <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
+            <div className="bg-white p-6 md:p-10 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100">
+               <div className="flex items-center justify-between border-b border-slate-100 pb-4 md:pb-8 mb-6 md:mb-10">
                 <div className="flex items-center space-x-4">
-                  <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
-                  <h2 className="text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.history}</h2>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <span className="bg-slate-100 px-6 py-3 rounded-full text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em] border border-slate-200">{records.length} {T.records}</span>
+                  <div className="w-1.5 h-8 md:h-10 bg-slate-900 rounded-full" />
+                  <h2 className="text-2xl md:text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.history}</h2>
                 </div>
               </div>
               
@@ -681,7 +678,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[calc(100%-4rem)] max-w-xl h-24 bg-slate-900/90 backdrop-blur-2xl flex justify-around items-center rounded-full shadow-[0_40px_80px_rgba(0,0,0,0.4)] z-50 border border-white/10 px-8">
+      <nav className="fixed bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] md:w-[calc(100%-4rem)] max-w-xl h-20 md:h-24 bg-slate-900/90 backdrop-blur-2xl flex justify-around items-center rounded-full shadow-[0_40px_80px_rgba(0,0,0,0.4)] z-50 border border-white/10 px-4 md:px-8">
         {[
           { id: 'upload', icon: Plus, label: T.upload },
           { id: 'dashboard', icon: BarChart3, label: T.dashboard },

@@ -169,19 +169,25 @@ export const TRANSLATIONS: Record<Language, any> = {
 };
 
 export const WonderlandLogo = ({ className = "w-12 h-12" }) => (
-  <div className={`relative flex items-center justify-center ${className}`}>
-    <svg viewBox="0 0 100 100" className="w-full h-full">
-      <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="2" />
-      <rect x="35" y="30" width="30" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="37" y="32" width="13" height="36" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M37 38h13M37 44h13M37 50h13M37 56h13M37 62h13" stroke="currentColor" strokeWidth="0.8" />
-      <line x1="43.5" y1="32" x2="43.5" y2="68" stroke="currentColor" strokeWidth="0.8" />
-      <rect x="50" y="32" width="13" height="36" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M50 38h13M50 44h13M50 50h13M50 56h13M50 62h13" stroke="currentColor" strokeWidth="0.8" />
-      <line x1="56.5" y1="32" x2="56.5" y2="68" stroke="currentColor" strokeWidth="0.8" />
-      <circle cx="48" cy="50" r="1.5" fill="currentColor" />
-      <circle cx="52" cy="50" r="1.5" fill="currentColor" />
-    </svg>
+  <div className={`relative flex flex-col items-center justify-center ${className}`}>
+    <div className="relative w-full aspect-square flex items-center justify-center">
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        {/* Left Door */}
+        <rect x="36" y="32" width="14" height="36" fill="none" stroke="currentColor" strokeWidth="1" />
+        <path d="M36 38h14M36 44h14M36 50h14M36 56h14M36 62h14" stroke="currentColor" strokeWidth="0.5" />
+        <line x1="43" y1="32" x2="43" y2="68" stroke="currentColor" strokeWidth="0.5" />
+        {/* Right Door */}
+        <rect x="50" y="32" width="14" height="36" fill="none" stroke="currentColor" strokeWidth="1" />
+        <path d="M50 38h14M50 44h14M50 50h14M50 56h14M50 62h14" stroke="currentColor" strokeWidth="0.5" />
+        <line x1="57" y1="32" x2="57" y2="68" stroke="currentColor" strokeWidth="0.5" />
+        {/* Door Handles */}
+        <circle cx="48.5" cy="50" r="1" fill="currentColor" />
+        <circle cx="51.5" cy="50" r="1" fill="currentColor" />
+        {/* Frame */}
+        <rect x="34" y="30" width="32" height="40" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      </svg>
+    </div>
   </div>
 );
 

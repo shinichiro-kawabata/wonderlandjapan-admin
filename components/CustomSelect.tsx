@@ -46,10 +46,10 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between pl-16 pr-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all text-left group"
+        className="w-full flex items-center justify-between pl-12 md:pl-16 pr-6 md:pr-8 py-4 md:py-6 bg-slate-50 border border-slate-100 rounded-[2rem] md:rounded-[2.5rem] text-xs md:text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all text-left group"
       >
-        <div className="flex items-center space-x-4">
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-slate-900 transition-colors">
+        <div className="flex items-center space-x-3 md:space-x-4">
+          <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-hover:text-slate-900 transition-colors">
             {selectedOption?.icon || icon}
           </div>
           <span className={selectedOption ? 'text-slate-900' : 'text-slate-400'}>
