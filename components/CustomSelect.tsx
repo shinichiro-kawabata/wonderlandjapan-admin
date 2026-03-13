@@ -67,13 +67,13 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute z-[100] w-full mt-3 bg-white/90 backdrop-blur-xl border border-slate-100 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden"
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute z-[100] w-[calc(100%-2rem)] left-4 mt-2 glass border border-white/20 rounded-[1.5rem] md:rounded-[2rem] shadow-luxury overflow-hidden"
           >
-            <div className="max-h-64 overflow-y-auto no-scrollbar py-3">
+            <div className="max-h-64 overflow-y-auto no-scrollbar py-2">
               {options.map((option) => (
                 <button
                   key={option.id}
@@ -82,15 +82,15 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                     onChange(option.id);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-8 py-4 text-sm font-bold transition-all hover:bg-slate-900 hover:text-white ${
-                    value === option.id ? 'text-slate-900 bg-slate-50' : 'text-slate-500'
+                  className={`w-full flex items-center justify-between px-6 md:px-8 py-3 md:py-4 text-[10px] md:text-xs font-bold transition-luxury hover:bg-white/30 ${
+                    value === option.id ? 'text-slate-900 bg-white/20' : 'text-slate-500'
                   }`}
                 >
-                  <div className="flex items-center space-x-4">
-                    {option.icon && <span className="w-5 h-5 opacity-70">{option.icon}</span>}
-                    <span>{option.label}</span>
+                  <div className="flex items-center space-x-3 md:space-x-4">
+                    {option.icon && <span className="w-4 h-4 md:w-5 md:h-5 opacity-70">{option.icon}</span>}
+                    <span className="uppercase tracking-widest">{option.label}</span>
                   </div>
-                  {value === option.id && <Check className="w-4 h-4 text-amber-500" />}
+                  {value === option.id && <Check className="w-3 h-3 md:w-4 md:h-4 text-red-700" />}
                 </button>
               ))}
             </div>

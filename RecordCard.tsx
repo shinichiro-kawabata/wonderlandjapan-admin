@@ -46,7 +46,7 @@ export const RecordCard: React.FC<RecordCardProps> = ({ record, lang, onDelete, 
               {TOUR_ICONS[record.type]}
             </div>
             <div>
-              <h4 className="text-xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">
+              <h4 className="text-xl font-fashion font-bold text-slate-900 uppercase tracking-tight">
                 {T.tours?.[record.type] || record.type}
               </h4>
               <div className="flex items-center space-x-3 mt-1">

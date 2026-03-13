@@ -231,8 +231,8 @@ const App: React.FC = () => {
           <div className="flex items-center space-x-4 md:space-x-6">
             <WonderlandLogo className="w-12 h-12 md:w-16 md:h-16" variant="red" /> 
             <div>
-              <h1 className="text-2xl md:text-3xl font-serif-luxury font-light leading-none tracking-widest uppercase">WONDERLAND</h1>
-              <p className="text-[9px] md:text-[10px] font-bold tracking-[0.6em] uppercase text-amber-500/80 mt-1">Japan Management</p>
+              <h1 className="text-xl md:text-3xl font-fashion font-bold leading-none tracking-[0.3em] uppercase">WONDERLAND</h1>
+              <p className="text-[8px] md:text-[10px] font-bold tracking-[0.5em] uppercase text-amber-500/80 mt-1">Japan Management</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -251,7 +251,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-5xl mx-auto pb-32 md:pb-44">
+      <main className="flex-1 px-3 py-2 md:p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-5xl mx-auto pb-32 md:pb-44">
         {showLogin && (
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6">
              <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-300">
@@ -271,9 +271,9 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'upload' && (
-          <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
-            <div className="bg-white p-6 md:p-12 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden">
-               <div className="flex items-center justify-between border-b border-slate-100 pb-4 md:pb-8 mb-2 md:mb-6">
+          <div className="space-y-3 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
+            <div className="bg-white p-4 md:p-12 rounded-[1.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+               <div className="flex items-center justify-between border-b border-slate-100 pb-2 md:pb-8 mb-1 md:mb-6">
                 <div className="flex items-center space-x-4">
                   <div className="w-1.5 h-8 md:h-10 bg-slate-900 rounded-full" />
                   <h2 className="text-2xl md:text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.newRecord}</h2>
@@ -392,21 +392,21 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'dashboard' && isAdmin && (
-          <div className="space-y-10 animate-in fade-in slide-in-from-right-10 pb-20">
-             <div className="flex flex-wrap gap-3">
+          <div className="space-y-4 md:space-y-10 animate-in fade-in slide-in-from-right-10 pb-20">
+             <div className="flex flex-wrap gap-2 md:gap-3">
                 {YEARS.map(y => (
                   <button 
                     key={y} 
                     onClick={() => setSelectedYear(y)} 
-                    className={`px-8 py-3 rounded-full font-bold text-[11px] uppercase tracking-widest border transition-all ${selectedYear === y ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
+                    className={`px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-[10px] md:text-[11px] uppercase tracking-widest border transition-all ${selectedYear === y ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
                   >
                     {y}
                   </button>
                 ))}
              </div>
              
-             <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden relative">
-                <div className="flex justify-between items-end mb-8 h-80 px-4 relative z-10">
+             <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden relative">
+                <div className="flex justify-between items-end mb-4 md:mb-8 h-64 md:h-80 px-2 md:px-4 relative z-10">
                   {monthlyData.map((d) => (
                     <div key={d.month} className="flex flex-col items-center flex-1 h-full justify-end relative group">
                       {d.rev > 0 && (
@@ -566,9 +566,9 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'history' && isAdmin && (
-          <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
-            <div className="bg-white p-6 md:p-10 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100">
-               <div className="flex items-center justify-between border-b border-slate-100 pb-4 md:pb-8 mb-6 md:mb-10">
+          <div className="space-y-4 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
+            <div className="bg-white p-4 md:p-10 rounded-[1.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100">
+               <div className="flex items-center justify-between border-b border-slate-100 pb-2 md:pb-8 mb-4 md:mb-10">
                 <div className="flex items-center space-x-4">
                   <div className="w-1.5 h-8 md:h-10 bg-slate-900 rounded-full" />
                   <h2 className="text-2xl md:text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.history}</h2>
@@ -624,9 +624,9 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-10 animate-in zoom-in duration-500 pb-20">
-             <div className="bg-white p-12 rounded-[4rem] shadow-2xl space-y-12 flex flex-col min-h-[70vh] relative border border-slate-100">
-                <div className="flex items-center space-x-4 border-b border-slate-100 pb-8">
+          <div className="space-y-4 md:space-y-10 animate-in zoom-in duration-500 pb-20">
+             <div className="bg-white p-6 md:p-12 rounded-[1.5rem] md:rounded-[4rem] shadow-2xl space-y-8 flex flex-col min-h-[70vh] relative border border-slate-100">
+                <div className="flex items-center space-x-4 border-b border-slate-100 pb-4 md:pb-8">
                   <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
                   <h2 className="text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.system}</h2>
                 </div>
