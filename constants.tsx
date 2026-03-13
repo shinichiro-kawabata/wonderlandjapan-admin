@@ -3,12 +3,12 @@ import React from 'react';
 import { TourType, Language } from './types';
 
 export const NARA_COLORS = {
-  DEER_BROWN: '#5D4037',
+  DEER_BROWN: '#3E2723',
   TORII_RED: '#AF2020',
   FOREST_GREEN: '#1B5E20',
   TEMPLE_GOLD: '#C5A059',
-  WASHI_CREAM: '#FDFCF0',
-  SUMI_BLACK: '#1A1A1A'
+  WASHI_CREAM: '#F9F7F2',
+  SUMI_BLACK: '#0A0A0A'
 };
 
 export const TOUR_COLORS: Record<TourType, string> = {
@@ -168,11 +168,13 @@ export const TRANSLATIONS: Record<Language, any> = {
   }
 };
 
-export const WonderlandLogo = ({ className = "w-12 h-12" }) => (
-  <div className={`relative flex flex-col items-center justify-center ${className}`}>
-    <div className="relative w-full aspect-square flex items-center justify-center">
-      <svg viewBox="0 0 100 100" className="w-full h-full">
+export const WonderlandLogo = ({ className = "w-12 h-12", variant = "light" }) => (
+  <div className={`relative flex flex-col items-center justify-center rounded-full overflow-hidden ${className} ${variant === 'red' ? 'bg-[#AF2020]' : ''}`}>
+    <div className="relative w-full aspect-square flex items-center justify-center p-[15%]">
+      <svg viewBox="0 0 100 100" className={`w-full h-full ${variant === 'red' ? 'text-white' : 'text-current'}`}>
         <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        {/* Frame */}
+        <rect x="34" y="30" width="32" height="40" fill="none" stroke="currentColor" strokeWidth="1.2" />
         {/* Left Door */}
         <rect x="36" y="32" width="14" height="36" fill="none" stroke="currentColor" strokeWidth="1" />
         <path d="M36 38h14M36 44h14M36 50h14M36 56h14M36 62h14" stroke="currentColor" strokeWidth="0.5" />
@@ -184,8 +186,6 @@ export const WonderlandLogo = ({ className = "w-12 h-12" }) => (
         {/* Door Handles */}
         <circle cx="48.5" cy="50" r="1" fill="currentColor" />
         <circle cx="51.5" cy="50" r="1" fill="currentColor" />
-        {/* Frame */}
-        <rect x="34" y="30" width="32" height="40" fill="none" stroke="currentColor" strokeWidth="1.2" />
       </svg>
     </div>
   </div>

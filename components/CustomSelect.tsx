@@ -46,7 +46,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between pl-12 md:pl-16 pr-6 md:pr-8 py-4 md:py-6 bg-slate-50 border border-slate-100 rounded-[2rem] md:rounded-[2.5rem] text-xs md:text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all text-left group"
+        className="w-full flex items-center justify-between pl-12 md:pl-16 pr-6 md:pr-8 py-3 md:py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] md:rounded-[2.5rem] text-xs md:text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-luxury text-left group"
       >
         <div className="flex items-center space-x-3 md:space-x-4">
           <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-hover:text-slate-900 transition-colors">
@@ -58,9 +58,9 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         </div>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.3, ease: "circOut" }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
-          <ChevronDown className="w-5 h-5 text-slate-400" />
+          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-slate-400" />
         </motion.div>
       </button>
 

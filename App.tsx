@@ -229,12 +229,10 @@ const App: React.FC = () => {
       <header className="p-4 md:p-8 pt-10 md:pt-14 rounded-b-[2rem] md:rounded-b-[3rem] shadow-2xl z-20 bg-slate-900 text-white shrink-0 border-b border-white/10">
         <div className="flex justify-between items-center max-w-5xl mx-auto w-full">
           <div className="flex items-center space-x-4 md:space-x-6">
-            <div className="bg-white/10 p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-md border border-white/20"> 
-              <WonderlandLogo className="w-8 h-8 md:w-10 md:h-10 text-amber-400" /> 
-            </div>
+            <WonderlandLogo className="w-12 h-12 md:w-16 md:h-16" variant="red" /> 
             <div>
-              <h1 className="text-2xl font-serif-luxury font-light leading-none tracking-widest uppercase">WONDERLAND</h1>
-              <p className="text-[10px] font-bold tracking-[0.6em] uppercase text-amber-500/80 mt-1">Japan Management</p>
+              <h1 className="text-2xl md:text-3xl font-serif-luxury font-light leading-none tracking-widest uppercase">WONDERLAND</h1>
+              <p className="text-[9px] md:text-[10px] font-bold tracking-[0.6em] uppercase text-amber-500/80 mt-1">Japan Management</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -275,24 +273,24 @@ const App: React.FC = () => {
         {activeTab === 'upload' && (
           <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
             <div className="bg-white p-6 md:p-12 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden">
-               <div className="flex items-center justify-between border-b border-slate-100 pb-4 md:pb-8 mb-6 md:mb-10">
+               <div className="flex items-center justify-between border-b border-slate-100 pb-4 md:pb-8 mb-2 md:mb-6">
                 <div className="flex items-center space-x-4">
-                  <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
-                  <h2 className="text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.newRecord}</h2>
+                  <div className="w-1.5 h-8 md:h-10 bg-slate-900 rounded-full" />
+                  <h2 className="text-2xl md:text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.newRecord}</h2>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                 {/* Date Selection */}
-                <div className="space-y-4">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.date}</label>
+                <div className="space-y-2 md:space-y-4">
+                  <label className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.date}</label>
                   <div className="relative group">
                     <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                     <input 
                       type="date" 
                       value={formData.date} 
                       onChange={e => setFormData({...formData, date: e.target.value})} 
-                      className="w-full pl-16 pr-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all" 
+                      className="w-full pl-12 md:pl-16 pr-6 md:pr-8 py-3 md:py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] md:rounded-[2.5rem] text-xs md:text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-luxury" 
                     />
                   </div>
                 </div>
@@ -334,7 +332,7 @@ const App: React.FC = () => {
                       type="number" 
                       value={formData.guests} 
                       onChange={e => setFormData({...formData, guests: e.target.value})} 
-                      className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all" 
+                      className="w-full px-6 md:px-8 py-3 md:py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] md:rounded-[2.5rem] text-xs md:text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-luxury" 
                     />
                   </div>
                   <div className="space-y-4">
@@ -344,7 +342,7 @@ const App: React.FC = () => {
                       step="0.5" 
                       value={formData.duration} 
                       onChange={e => setFormData({...formData, duration: parseFloat(e.target.value)})} 
-                      className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all" 
+                      className="w-full px-6 md:px-8 py-3 md:py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] md:rounded-[2.5rem] text-xs md:text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-luxury" 
                     />
                   </div>
                 </div>
@@ -366,14 +364,14 @@ const App: React.FC = () => {
                   <div className="md:col-span-2 space-y-4">
                     <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.amount}</label>
                     <div className="relative group">
-                      <span className="absolute left-8 top-1/2 -translate-y-1/2 font-serif-luxury text-xl text-slate-300 group-focus-within:text-slate-900 transition-colors">
+                      <span className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 font-serif-luxury text-lg md:text-xl text-slate-300 group-focus-within:text-slate-900 transition-colors">
                         {CURRENCIES.find(c => c.code === formData.currency)?.symbol}
                       </span>
                       <input 
                         type="number" 
                         value={formData.originalAmount} 
                         onChange={e => setFormData({...formData, originalAmount: parseFloat(e.target.value)})} 
-                        className="w-full pl-16 pr-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-xl font-serif-luxury font-medium outline-none focus:border-slate-900 shadow-inner transition-all" 
+                        className="w-full pl-12 md:pl-16 pr-6 md:pr-8 py-3 md:py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] md:rounded-[2.5rem] text-lg md:text-xl font-serif-luxury font-medium outline-none focus:border-slate-900 shadow-inner transition-luxury" 
                       />
                     </div>
                   </div>
@@ -382,10 +380,10 @@ const App: React.FC = () => {
 
               <button 
                 onClick={handleSaveRecord} 
-                className="w-full mt-12 bg-slate-900 hover:bg-slate-800 text-white h-28 rounded-[3.5rem] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center group relative overflow-hidden"
+                className="w-full mt-8 md:mt-12 bg-slate-900 hover:bg-slate-800 text-white h-20 md:h-28 rounded-[2rem] md:rounded-[3.5rem] shadow-2xl active:scale-[0.98] transition-luxury flex items-center justify-center group relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-600/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <span className="relative z-10 font-serif-luxury text-2xl uppercase tracking-[0.3em] group-hover:tracking-[0.4em] transition-all">
+                <span className="relative z-10 font-serif-luxury text-xl md:text-2xl uppercase tracking-[0.3em] group-hover:tracking-[0.4em] transition-all">
                   {T.save}
                 </span>
               </button>
@@ -452,19 +450,19 @@ const App: React.FC = () => {
                 </div>
              </div>
 
-             <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl relative space-y-10 border border-slate-100">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-6">
+             <div className="bg-white p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl relative space-y-8 md:space-y-10 border border-slate-100">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4 md:pb-6">
                   <div className="flex items-center space-x-4">
-                    <div className="w-1.5 h-8 bg-amber-600 rounded-full" />
-                    <h3 className="text-3xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.statsTitle}</h3>
+                    <div className="w-1.5 h-6 md:h-8 bg-amber-600 rounded-full" />
+                    <h3 className="text-xl md:text-3xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.statsTitle}</h3>
                   </div>
-                  <Sparkles className="w-6 h-6 text-amber-500 animate-pulse" />
+                  <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-amber-500 animate-pulse" />
                 </div>
                 
-                <div className="grid grid-cols-1 gap-10">
-                  <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 shadow-inner">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 ml-2">Tour Distribution</p>
-                    <div className="h-72 w-full">
+                <div className="grid grid-cols-1 gap-6 md:gap-10">
+                  <div className="bg-slate-50 p-4 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-slate-100 shadow-inner">
+                    <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 md:mb-6 ml-2">Tour Distribution</p>
+                    <div className="h-64 md:h-72 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -474,8 +472,8 @@ const App: React.FC = () => {
                             }, {} as Record<string, number>)).map(([name, value]) => ({ name: T.tours[name] || name, value }))}
                             cx="50%"
                             cy="50%"
-                            innerRadius={70}
-                            outerRadius={90}
+                            innerRadius={50}
+                            outerRadius={70}
                             paddingAngle={8}
                             dataKey="value"
                             stroke="none"
@@ -485,17 +483,17 @@ const App: React.FC = () => {
                             ))}
                           </Pie>
                           <Tooltip 
-                            contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold', padding: '1rem' }}
+                            contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold', padding: '0.75rem', fontSize: '12px' }}
                           />
-                          <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ paddingTop: '2rem', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                          <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ paddingTop: '1rem', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 shadow-inner">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 ml-2">Guide Performance (Revenue)</p>
-                    <div className="h-72 w-full">
+                  <div className="bg-slate-50 p-4 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-slate-100 shadow-inner">
+                    <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 md:mb-6 ml-2">Guide Performance (Revenue)</p>
+                    <div className="h-64 md:h-72 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                           data={Object.entries(stats.raw.reduce((acc, r) => {
@@ -503,16 +501,16 @@ const App: React.FC = () => {
                             return acc;
                           }, {} as Record<string, number>)).map(([name, value]) => ({ name, value }))}
                           layout="vertical"
-                          margin={{ left: 20, right: 20 }}
+                          margin={{ left: 10, right: 20 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.5} />
                           <XAxis type="number" hide />
-                          <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} axisLine={false} tickLine={false} />
+                          <YAxis dataKey="name" type="category" width={60} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#64748b' }} axisLine={false} tickLine={false} />
                           <Tooltip 
                             formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
-                            contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold', padding: '1rem' }}
+                            contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold', padding: '0.75rem', fontSize: '12px' }}
                           />
-                          <Bar dataKey="value" fill="#0f172a" radius={[0, 20, 20, 0]} barSize={30} />
+                          <Bar dataKey="value" fill="#0f172a" radius={[0, 20, 20, 0]} barSize={20} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
