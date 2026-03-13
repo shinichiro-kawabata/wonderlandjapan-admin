@@ -7,7 +7,7 @@ import { TrendingUp, Users, Map, Wallet, Calendar, Clock, ChevronDown, Trash2, L
 import { analyzeRecords } from './services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import { RecordCard } from './RecordCard';
-import { CustomSelect } from './src/components/CustomSelect';
+import { CustomSelect } from './components/CustomSelect';
 import { motion, AnimatePresence } from 'motion/react';
 
 const formatDate = (dateStr: string, lang: Language) => {
