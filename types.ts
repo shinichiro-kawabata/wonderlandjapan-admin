@@ -3,17 +3,22 @@ export enum TourType {
   ARASHIYAMA_WALK = 'ARASHIYAMA_WALK',
   KYOTO_FOOD = 'KYOTO_FOOD',
   OSAKA_FOOD = 'OSAKA_FOOD',
-  FREE_TOUR = 'FREE_TOUR'
+  FREE_TOUR = 'FREE_TOUR',
+  PRIVATE_TOUR = 'PRIVATE_TOUR'
 }
 
 export type Language = 'ja' | 'en';
+
+export type Currency = 'JPY' | 'EUR' | 'USD' | 'GBP' | 'TWD' | 'CNY';
 
 export interface TourRecord {
   id: string;
   date: string;
   type: TourType;
   guide: string;
-  revenue: number;
+  revenue: number; // Always in JPY for stats
+  currency: Currency;
+  originalAmount: number;
   guests: number;
   duration: number;
   notes?: string;

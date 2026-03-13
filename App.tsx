@@ -1,8 +1,14 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { TourType, TourRecord, Language } from './types';
-import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES, TOUR_ICONS } from './constants';
+import { TourType, TourRecord, Language, Currency } from './types';
+import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES, TOUR_ICONS, CURRENCIES } from './constants';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { TrendingUp, Users, Map, Wallet, Calendar, Clock, ChevronDown, Trash2, LogOut, Globe, BarChart3, History, Settings, Plus, Sparkles, ArrowRight } from 'lucide-react';
 import { analyzeRecords } from './services/geminiService';
+import ReactMarkdown from 'react-markdown';
+import { RecordCard } from './RecordCard';
+import { CustomSelect } from './src/components/CustomSelect';
+import { motion, AnimatePresence } from 'motion/react';
 
 const formatDate = (dateStr: string, lang: Language) => {
   if (!dateStr) return '---';
@@ -16,45 +22,6 @@ const formatDate = (dateStr: string, lang: Language) => {
   const dow = d.getDay();
   const weekday = lang === 'ja' ? weekdaysJa[dow] : weekdaysEn[dow];
   return `${y}/${m}/${day} (${weekday})`;
-};
-
-const RecordCardInternal: React.FC<{ record: TourRecord; lang: Language; onDelete: (id: string) => void; isAdmin?: boolean }> = ({ record, lang, onDelete, isAdmin = false }) => {
-  const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
-  return (
-    <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 p-6 mb-5 flex items-center justify-between transition-all active:scale-[0.97] group">
-      <div className="flex items-center space-x-5 flex-1 min-w-0">
-        <div className="p-4 rounded-2xl text-white shadow-lg flex-shrink-0 transition-transform group-hover:rotate-6" style={{ backgroundColor: TOUR_COLORS[record.type] }}>
-          {TOUR_ICONS[record.type]}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-black text-slate-900 text-base tracking-tight font-washi truncate">
-            {T.tours?.[record.type] || record.type}
-          </h4>
-          <div className="flex items-center space-x-3 mt-1">
-             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{formatDate(record.date, lang)}</p>
-             <span className="text-[9px] bg-amber-50 text-amber-900 px-3 py-1 rounded-full font-black border border-amber-200">
-               {record.guide}
-             </span>
-          </div>
-          <div className="flex gap-2.5 mt-3">
-            {isAdmin && (
-              <span className="text-[10px] bg-white px-3.5 py-1.5 rounded-xl text-slate-800 font-black border border-slate-100 shadow-sm">
-                ¥{record.revenue.toLocaleString()}
-              </span>
-            )}
-            <span className="text-[10px] bg-white px-3.5 py-1.5 rounded-xl text-slate-800 font-black border border-slate-100 shadow-sm">
-              {record.guests} {T.guestUnit}
-            </span>
-          </div>
-        </div>
-      </div>
-      {isAdmin && (
-        <button onClick={(e) => { e.stopPropagation(); onDelete(record.id); }} className="p-4 text-slate-200 hover:text-red-500 transition-all">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-        </button>
-      )}
-    </div>
-  );
 };
 
 const ADMIN_PASSWORD = '2025';
@@ -221,27 +188,72 @@ const App: React.FC = () => {
     return { rev: filtered.reduce((acc, r) => acc + r.revenue, 0), pax: filtered.reduce((acc, r) => acc + r.guests, 0), count: filtered.length, raw: filtered };
   }, [records, selectedYear, selectedMonth]);
 
-  const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], type: TourType.GION_WALK, guide: GUIDES[0], revenue: '', guests: '1', duration: 3 });
+  const [formData, setFormData] = useState({ 
+    date: new Date().toISOString().split('T')[0], 
+    type: TourType.GION_WALK, 
+    guide: GUIDES[0], 
+    revenue: '', 
+    currency: 'JPY' as Currency,
+    originalAmount: 0,
+    guests: '1', 
+    duration: 3 
+  });
+
+  const handleSaveRecord = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const originalAmount = formData.originalAmount || 0;
+    const currencyInfo = CURRENCIES.find(c => c.code === formData.currency) || CURRENCIES[0];
+    const jpyRevenue = Math.round(originalAmount * currencyInfo.rate);
+    
+    const newRecord: TourRecord = { 
+      id: crypto.randomUUID(), 
+      date: formData.date, 
+      type: formData.type, 
+      guide: formData.guide, 
+      revenue: jpyRevenue,
+      currency: formData.currency,
+      originalAmount: originalAmount,
+      guests: Number(formData.guests), 
+      duration: formData.duration, 
+      createdAt: Date.now() 
+    };
+    const updated = [newRecord, ...records];
+    setRecords(updated);
+    setFormData({ ...formData, revenue: '', originalAmount: 0, guests: '1', duration: 3 });
+    alert(T.saveSuccess);
+    if (autoSync && cloudUrl) performCloudSync(false, updated);
+  };
 
   return (
     <div className="fixed inset-0 w-full h-full flex flex-col overflow-hidden select-none" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
-      <header className="p-6 pt-12 rounded-b-[2.5rem] shadow-2xl z-20 bg-slate-900 text-white shrink-0">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <div className="bg-red-700 p-2 rounded-xl shadow-lg"> <WonderlandLogo className="w-8 h-8" /> </div>
+      <header className="p-8 pt-14 rounded-b-[3rem] shadow-2xl z-20 bg-slate-900 text-white shrink-0 border-b border-white/10">
+        <div className="flex justify-between items-center max-w-5xl mx-auto w-full">
+          <div className="flex items-center space-x-6">
+            <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/20"> 
+              <WonderlandLogo className="w-10 h-10 text-amber-400" /> 
+            </div>
             <div>
-              <h1 className="text-xl font-black font-washi leading-tight tracking-tight uppercase">WONDERLAND</h1>
-              <p className="text-[8px] font-bold tracking-[0.5em] uppercase text-red-500">Japan Hub</p>
+              <h1 className="text-2xl font-serif-luxury font-light leading-none tracking-widest uppercase">WONDERLAND</h1>
+              <p className="text-[10px] font-bold tracking-[0.6em] uppercase text-amber-500/80 mt-1">Japan Management</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-             {isAdmin && <button onClick={handleLogout} className="bg-red-950/50 text-red-500 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-red-900/50 mr-2">{T.logout}</button>}
-             <button onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')} className="bg-white/10 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/5">{lang === 'ja' ? 'EN' : 'JA'}</button>
+          <div className="flex items-center space-x-4">
+             {isAdmin && (
+               <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors p-2">
+                 <LogOut className="w-5 h-5" />
+               </button>
+             )}
+             <button 
+               onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')} 
+               className="bg-white/5 hover:bg-white/10 px-5 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/10 transition-all"
+             >
+               {lang === 'ja' ? 'English' : '日本語'}
+             </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-md mx-auto pb-44">
+      <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-5xl mx-auto pb-44">
         {showLogin && (
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6">
              <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-300">
@@ -261,213 +273,434 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'upload' && (
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            const newRecord: TourRecord = { id: crypto.randomUUID(), date: formData.date, type: formData.type, guide: formData.guide, revenue: Number(formData.revenue.replace(/,/g, '') || 0), guests: Number(formData.guests), duration: formData.duration, createdAt: Date.now() };
-            const updated = [newRecord, ...records];
-            setRecords(updated);
-            setFormData({ ...formData, revenue: '', guests: '1', duration: 3 });
-            alert(T.saveSuccess);
-            if (autoSync && cloudUrl) performCloudSync(false, updated);
-          }} className="bg-white p-8 rounded-[3.5rem] shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-10 w-full overflow-hidden">
-            <h2 className="text-2xl font-black font-washi text-slate-900 border-l-8 border-red-700 pl-6 uppercase tracking-tighter">{T.upload}</h2>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.date}</label>
-                <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full p-6 bg-slate-900 text-white font-black font-washi text-xl rounded-[2rem] outline-none shadow-xl border-4 border-slate-800" required />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.guide}</label>
-                   <select value={formData.guide} onChange={e => setFormData({...formData, guide: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-black text-xl outline-none shadow-inner focus:border-red-700 appearance-none">
-                     {GUIDES.map(g => <option key={g} value={g}>{g}</option>)}
-                   </select>
-                </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.type}</label>
-                   <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as TourType})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold outline-none shadow-inner focus:border-red-700 text-[11px] appearance-none leading-tight">
-                     {Object.entries(T.tours).map(([val, label]) => <option key={val} value={val}>{label as string}</option>)}
-                   </select>
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
+            <div className="bg-white p-12 rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+               <div className="flex items-center justify-between border-b border-slate-100 pb-8 mb-10">
+                <div className="flex items-center space-x-4">
+                  <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
+                  <h2 className="text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.newRecord}</h2>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.revenue}</label>
-                  <input type="text" inputMode="numeric" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ",")})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-black text-2xl outline-none shadow-inner" placeholder="0" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                {/* Date Selection */}
+                <div className="space-y-4">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.date}</label>
+                  <div className="relative group">
+                    <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+                    <input 
+                      type="date" 
+                      value={formData.date} 
+                      onChange={e => setFormData({...formData, date: e.target.value})} 
+                      className="w-full pl-16 pr-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all" 
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{T.guests}</label>
-                  <select value={formData.guests} onChange={e => setFormData({...formData, guests: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-black text-2xl outline-none shadow-inner appearance-none">
-                    {Array.from({length: 15}, (_, i) => <option key={i+1} value={i+1}>{i+1} {T.guestUnit}</option>)}
-                  </select>
+
+                {/* Tour Type */}
+                <div className="space-y-4">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.tourType}</label>
+                  <CustomSelect 
+                    value={formData.type}
+                    onChange={(val: string) => setFormData({...formData, type: val as TourType})}
+                    options={Object.values(TourType).map(t => ({
+                      id: t,
+                      label: T.tours?.[t] || t,
+                      icon: TOUR_ICONS[t as TourType]
+                    }))}
+                    icon={<Map className="w-5 h-5" />}
+                  />
+                </div>
+
+                {/* Guide */}
+                <div className="space-y-4">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.guide}</label>
+                  <CustomSelect 
+                    value={formData.guide}
+                    onChange={(val: string) => setFormData({...formData, guide: val})}
+                    options={GUIDES.map(g => ({
+                      id: g,
+                      label: g
+                    }))}
+                    icon={<Users className="w-5 h-5" />}
+                  />
+                </div>
+
+                {/* Guests & Duration */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.guests}</label>
+                    <input 
+                      type="number" 
+                      value={formData.guests} 
+                      onChange={e => setFormData({...formData, guests: e.target.value})} 
+                      className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all" 
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.duration} (h)</label>
+                    <input 
+                      type="number" 
+                      step="0.5" 
+                      value={formData.duration} 
+                      onChange={e => setFormData({...formData, duration: parseFloat(e.target.value)})} 
+                      className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all" 
+                    />
+                  </div>
+                </div>
+
+                {/* Currency & Amount */}
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-50">
+                  <div className="space-y-4">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.currency}</label>
+                    <CustomSelect 
+                      value={formData.currency}
+                      onChange={(val: string) => setFormData({...formData, currency: val as Currency})}
+                      options={CURRENCIES.map(c => ({
+                        id: c.code,
+                        label: `${c.code} (${c.symbol})`
+                      }))}
+                      icon={<Wallet className="w-5 h-5" />}
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-4">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.amount}</label>
+                    <div className="relative group">
+                      <span className="absolute left-8 top-1/2 -translate-y-1/2 font-serif-luxury text-xl text-slate-300 group-focus-within:text-slate-900 transition-colors">
+                        {CURRENCIES.find(c => c.code === formData.currency)?.symbol}
+                      </span>
+                      <input 
+                        type="number" 
+                        value={formData.originalAmount} 
+                        onChange={e => setFormData({...formData, originalAmount: parseFloat(e.target.value)})} 
+                        className="w-full pl-16 pr-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-xl font-serif-luxury font-medium outline-none focus:border-slate-900 shadow-inner transition-all" 
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <button type="submit" className="w-full bg-red-700 h-24 rounded-[3rem] shadow-2xl active:scale-[0.96] transition-all flex items-center justify-center overflow-hidden border-b-8 border-red-900 border-r-2 border-l-2 border-red-800">
-                <span className="text-white font-black text-2xl font-washi uppercase tracking-[0.2em]">{T.saveRecordBtn}</span>
+
+              <button 
+                onClick={handleSaveRecord} 
+                className="w-full mt-12 bg-slate-900 hover:bg-slate-800 text-white h-28 rounded-[3.5rem] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center group relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-600/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <span className="relative z-10 font-serif-luxury text-2xl uppercase tracking-[0.3em] group-hover:tracking-[0.4em] transition-all">
+                  {T.save}
+                </span>
               </button>
             </div>
-          </form>
+          </div>
         )}
 
         {activeTab === 'dashboard' && isAdmin && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-10 pb-10 w-full overflow-hidden">
-             <div className="flex flex-wrap gap-2">
+          <div className="space-y-10 animate-in fade-in slide-in-from-right-10 pb-20">
+             <div className="flex flex-wrap gap-3">
                 {YEARS.map(y => (
-                  <button key={y} onClick={() => setSelectedYear(y)} className={`px-6 py-3 rounded-full font-black text-xs border-2 transition-all ${selectedYear === y ? 'bg-red-700 text-white border-red-700 shadow-lg' : 'bg-white text-slate-300 border-slate-100'}`}>{y}</button>
+                  <button 
+                    key={y} 
+                    onClick={() => setSelectedYear(y)} 
+                    className={`px-8 py-3 rounded-full font-bold text-[11px] uppercase tracking-widest border transition-all ${selectedYear === y ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
+                  >
+                    {y}
+                  </button>
                 ))}
              </div>
              
              <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden relative">
-                <div className="flex justify-between items-end mb-4 h-80 px-2 relative z-10">
+                <div className="flex justify-between items-end mb-8 h-80 px-4 relative z-10">
                   {monthlyData.map((d) => (
                     <div key={d.month} className="flex flex-col items-center flex-1 h-full justify-end relative group">
-                      {/* 直接顯示在柱體上方的數值 (優化觀看) */}
                       {d.rev > 0 && (
-                        <div className="absolute bottom-[calc(height+5px)] mb-1 flex flex-col items-center z-20 pointer-events-none">
-                           <span className="text-[8px] font-black text-slate-900 bg-white/90 px-1 rounded shadow-sm border border-slate-100">¥{(d.rev/1000).toFixed(0)}k</span>
+                        <div className="absolute bottom-[calc(height+8px)] mb-2 flex flex-col items-center z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                           <span className="text-[10px] font-bold text-slate-900 bg-white px-2 py-1 rounded-lg shadow-xl border border-slate-100">¥{(d.rev/1000).toFixed(0)}k</span>
                         </div>
                       )}
                       
-                      {/* 進步/退步標示 (置中顯示) */}
-                      {d.rev > 0 && d.month > 1 && (
-                        <div className="absolute top-[40%] left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-                          {d.diff > 0 ? (
-                            <div className="flex flex-col items-center">
-                              <span className="text-[12px] font-black text-green-500 drop-shadow-sm">▲</span>
-                              <span className="text-[7px] font-black text-green-700 bg-green-50/80 px-0.5 rounded">+{d.growth.toFixed(0)}%</span>
-                            </div>
-                          ) : d.diff < 0 ? (
-                            <div className="flex flex-col items-center">
-                              <span className="text-[12px] font-black text-red-500 drop-shadow-sm">▼</span>
-                              <span className="text-[7px] font-black text-red-700 bg-red-50/80 px-0.5 rounded">{d.growth.toFixed(0)}%</span>
-                            </div>
-                          ) : null}
-                        </div>
-                      )}
-
-                      <div onClick={() => setSelectedMonth(d.month)} className={`w-4/5 rounded-t-full rounded-b-lg transition-all duration-700 cursor-pointer ${selectedMonth === d.month ? 'ring-4 ring-red-700/30 shadow-2xl scale-110 z-10' : 'opacity-40'} ${d.isMax ? 'bg-gradient-to-t from-red-800 to-red-500' : 'bg-slate-900'}`} style={{ height: `${Math.max(d.height, 4)}%` }}>
-                      </div>
-                      <span className={`text-[9px] font-black mt-4 ${selectedMonth === d.month ? 'text-red-700' : 'text-slate-300'}`}>{T.months[d.month]}</span>
+                      <div 
+                        onClick={() => setSelectedMonth(d.month)} 
+                        className={`w-3/5 rounded-t-full rounded-b-xl transition-all duration-700 cursor-pointer relative ${selectedMonth === d.month ? 'ring-4 ring-amber-500/30 shadow-2xl scale-110 z-10' : 'opacity-30 hover:opacity-60'} ${d.isMax ? 'bg-gradient-to-t from-amber-600 to-amber-400' : 'bg-slate-900'}`} 
+                        style={{ height: `${Math.max(d.height, 4)}%` }} 
+                      />
+                      <span className={`text-[10px] font-bold mt-6 uppercase tracking-widest transition-colors ${selectedMonth === d.month ? 'text-amber-600' : 'text-slate-300'}`}>{T.months[d.month].substring(0, 3)}</span>
                     </div>
                   ))}
                 </div>
-                <button onClick={() => setSelectedMonth('all')} className="w-full text-[11px] font-black text-slate-900 border-t border-slate-50 pt-6 uppercase tracking-widest">{T.viewFullYear}</button>
+                <button onClick={() => setSelectedMonth('all')} className="w-full text-[11px] font-bold text-slate-400 border-t border-slate-50 pt-8 uppercase tracking-[0.3em] hover:text-slate-900 transition-colors">{T.viewFullYear}</button>
              </div>
 
-             <div className="bg-slate-900 text-white p-12 rounded-[4.5rem] shadow-2xl">
-                <p className="text-amber-400 text-[11px] font-black uppercase tracking-[0.5em] mb-6">
+             <div className="bg-slate-900 text-white p-12 rounded-[4.5rem] shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-12 opacity-5">
+                  <TrendingUp className="w-48 h-48" />
+                </div>
+                <p className="text-amber-500 text-[11px] font-bold uppercase tracking-[0.5em] mb-8 relative z-10">
                   {selectedYear} • {selectedMonth === 'all' ? T.annualSummary : `${T.monthlyPerformance} (${T.months[selectedMonth]})`}
                 </p>
-                <div className="flex items-baseline space-x-3 mb-10 overflow-hidden">
-                   <span className="text-xl font-black text-slate-600">¥</span>
-                   {/* 修正：字體大小調降至 text-5xl，並加入 break-all 防止超長溢出 */}
-                   <h2 className="text-5xl font-black font-washi tracking-tighter break-all">{stats.rev.toLocaleString()}</h2>
+                <div className="flex items-baseline space-x-4 mb-12 relative z-10">
+                   <span className="text-2xl font-light text-slate-500 font-serif-luxury">¥</span>
+                   <h2 className="text-6xl font-serif-luxury font-medium tracking-tight break-all">{stats.rev.toLocaleString()}</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-5">
-                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[10px] text-slate-500 font-black mb-1 uppercase">{T.guests}</p>
-                      <p className="text-2xl font-black">{stats.pax}</p>
+                <div className="grid grid-cols-2 gap-6 relative z-10">
+                   <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 backdrop-blur-md">
+                      <p className="text-[11px] text-slate-500 font-bold mb-2 uppercase tracking-widest">{T.guests}</p>
+                      <p className="text-3xl font-serif-luxury">{stats.pax}</p>
                    </div>
-                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[10px] text-slate-500 font-black mb-1 uppercase">TOURS</p>
-                      <p className="text-2xl font-black">{stats.count}</p>
+                   <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 backdrop-blur-md">
+                      <p className="text-[11px] text-slate-500 font-bold mb-2 uppercase tracking-widest">TOURS</p>
+                      <p className="text-3xl font-serif-luxury">{stats.count}</p>
                    </div>
                 </div>
              </div>
 
-             <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl relative">
-                <h3 className="text-2xl font-black font-washi text-slate-900 mb-8 uppercase tracking-tighter">{T.aiInsights}</h3>
-                <div className="text-[13px] leading-[2.4] text-slate-600 font-washi whitespace-pre-wrap min-h-[200px] bg-slate-50 p-8 rounded-3xl border border-slate-100">{aiInsight || T.aiPlaceholder}</div>
-                <button onClick={() => { setIsAnalyzing(true); setAiInsight(null); analyzeRecords(stats.raw, lang).then(setAiInsight).finally(() => setIsAnalyzing(false)); }} disabled={isAnalyzing} className="w-full h-24 bg-slate-900 text-white font-black rounded-full text-xs uppercase tracking-[0.3em] mt-10 active:scale-95 disabled:opacity-30 flex items-center justify-center border-b-8 border-slate-950">
-                  {isAnalyzing ? T.aiAnalyzing : T.aiAnalyzeBtn}
-                </button>
+             <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl relative space-y-10 border border-slate-100">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-1.5 h-8 bg-amber-600 rounded-full" />
+                    <h3 className="text-3xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.statsTitle}</h3>
+                  </div>
+                  <Sparkles className="w-6 h-6 text-amber-500 animate-pulse" />
+                </div>
+                
+                <div className="grid grid-cols-1 gap-10">
+                  <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 shadow-inner">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 ml-2">Tour Distribution</p>
+                    <div className="h-72 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={Object.entries(stats.raw.reduce((acc, r) => {
+                              acc[r.type] = (acc[r.type] || 0) + 1;
+                              return acc;
+                            }, {} as Record<string, number>)).map(([name, value]) => ({ name: T.tours[name] || name, value }))}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={70}
+                            outerRadius={90}
+                            paddingAngle={8}
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            {Object.keys(TOUR_COLORS).map((key, index) => (
+                              <Cell key={`cell-${index}`} fill={TOUR_COLORS[key as TourType]} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold', padding: '1rem' }}
+                          />
+                          <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ paddingTop: '2rem', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 shadow-inner">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 ml-2">Guide Performance (Revenue)</p>
+                    <div className="h-72 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={Object.entries(stats.raw.reduce((acc, r) => {
+                            acc[r.guide] = (acc[r.guide] || 0) + r.revenue;
+                            return acc;
+                          }, {} as Record<string, number>)).map(([name, value]) => ({ name, value }))}
+                          layout="vertical"
+                          margin={{ left: 20, right: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.5} />
+                          <XAxis type="number" hide />
+                          <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} axisLine={false} tickLine={false} />
+                          <Tooltip 
+                            formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
+                            contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold', padding: '1rem' }}
+                          />
+                          <Bar dataKey="value" fill="#0f172a" radius={[0, 20, 20, 0]} barSize={30} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* AI Analysis Section */}
+                  <div className="bg-slate-900 text-white p-10 rounded-[3.5rem] shadow-2xl space-y-8 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <Sparkles className="w-32 h-32" />
+                    </div>
+                    <div className="flex items-center space-x-4 relative z-10">
+                      <div className="bg-amber-500 p-2 rounded-xl">
+                        <TrendingUp className="w-6 h-6 text-slate-900" />
+                      </div>
+                      <h3 className="text-2xl font-serif-luxury font-medium uppercase tracking-widest text-amber-400">Strategic AI Report</h3>
+                    </div>
+                    
+                    <div className="relative z-10">
+                      {isAnalyzing ? (
+                        <div className="flex flex-col items-center py-12 space-y-6">
+                          <div className="loader !border-amber-400"></div>
+                          <p className="text-amber-400 font-bold tracking-[0.3em] text-[10px] uppercase animate-pulse">{T.statsLoading}</p>
+                        </div>
+                      ) : aiInsight ? (
+                        <div className="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed font-light">
+                          <ReactMarkdown>{aiInsight}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <div className="py-12 text-center">
+                          <p className="text-slate-500 italic text-sm mb-8">{T.statsPlaceholder}</p>
+                          <button 
+                            onClick={() => { setIsAnalyzing(true); setAiInsight(null); analyzeRecords(stats.raw, lang).then(setAiInsight).finally(() => setIsAnalyzing(false)); }}
+                            className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-10 py-5 rounded-full font-bold text-[11px] uppercase tracking-[0.2em] transition-all shadow-xl active:scale-95"
+                          >
+                            {T.statsRefreshBtn}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {aiInsight && !isAnalyzing && (
+                      <button 
+                        onClick={() => { setIsAnalyzing(true); setAiInsight(null); analyzeRecords(stats.raw, lang).then(setAiInsight).finally(() => setIsAnalyzing(false)); }}
+                        className="w-full py-4 border-t border-white/10 text-amber-500/60 hover:text-amber-500 text-[10px] font-bold uppercase tracking-[0.3em] transition-colors mt-4"
+                      >
+                        Regenerate Analysis
+                      </button>
+                    )}
+                  </div>
+                </div>
              </div>
           </div>
         )}
 
         {activeTab === 'history' && isAdmin && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-left-10 pb-10 w-full overflow-hidden">
-             <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter mb-10 ml-2">{T.archives}</h2>
-             {Object.keys(groupedHistoryByMonth).length === 0 ? (
-               <div className="py-44 text-center text-slate-200 font-black tracking-[0.8em] text-xs uppercase">Empty</div>
-             ) : (
-               Object.entries(groupedHistoryByMonth).map(([monthKey, monthRecords]) => {
-                 // 防禦 NaN 或 undefined 顯示
-                 if (monthKey.includes('NaN') || monthKey.includes('undefined')) return null;
-                 const [y, m] = monthKey.split('-');
-                 const monthIdx = parseInt(m);
-                 const displayMonth = lang === 'ja' ? `${y}年 ${monthIdx}月` : `${T.months[monthIdx]} ${y}`;
-                 return (
-                   <div key={monthKey} className="space-y-4">
-                      <button 
-                        onClick={() => setExpandedMonths(prev => prev.includes(monthKey) ? prev.filter(k => k !== monthKey) : [...prev, monthKey])}
-                        className="w-full flex justify-between items-center bg-white px-8 py-7 rounded-[2.5rem] border-2 border-slate-100 font-black text-lg text-slate-800 tracking-widest shadow-lg active:scale-95 transition-all"
-                      >
-                         <span className="font-washi">{displayMonth}</span>
-                         <svg className={`w-7 h-7 transition-transform duration-500 ${expandedMonths.includes(monthKey) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M19 9l-7 7-7-7" /></svg>
-                      </button>
-                      {expandedMonths.includes(monthKey) && (
-                        <div className="space-y-5 pt-2 animate-in fade-in slide-in-from-top-6 duration-500">
-                          {monthRecords.map(r => <RecordCardInternal key={r.id} record={r} lang={lang} onDelete={handleDeleteRecord} isAdmin={isAdmin} />)}
-                        </div>
-                      )}
-                   </div>
-                 );
-               })
-             )}
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
+            <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-slate-100">
+               <div className="flex items-center justify-between border-b border-slate-100 pb-8 mb-10">
+                <div className="flex items-center space-x-4">
+                  <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
+                  <h2 className="text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.history}</h2>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="bg-slate-100 px-6 py-3 rounded-full text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em] border border-slate-200">{records.length} {T.records}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-12">
+                {Object.keys(groupedHistoryByMonth).length === 0 ? (
+                  <div className="py-32 text-center space-y-6">
+                    <History className="w-16 h-16 text-slate-100 mx-auto" />
+                    <p className="text-slate-300 font-serif-luxury italic text-xl">{T.noRecords}</p>
+                  </div>
+                ) : (
+                  Object.entries(groupedHistoryByMonth).map(([monthKey, monthRecords]) => {
+                    if (monthKey.includes('NaN') || monthKey.includes('undefined')) return null;
+                    const [y, m] = monthKey.split('-');
+                    const monthIdx = parseInt(m);
+                    const displayMonth = lang === 'ja' ? `${y}年 ${monthIdx}月` : `${T.months[monthIdx]} ${y}`;
+                    const isExpanded = expandedMonths.includes(monthKey);
+                    
+                    return (
+                      <div key={monthKey} className="space-y-6">
+                         <button 
+                           onClick={() => setExpandedMonths(prev => isExpanded ? prev.filter(k => k !== monthKey) : [...prev, monthKey])}
+                           className={`w-full flex justify-between items-center px-10 py-8 rounded-[3rem] border transition-all duration-500 ${isExpanded ? 'bg-slate-900 text-white border-slate-900 shadow-2xl' : 'bg-slate-50 text-slate-900 border-slate-100 hover:bg-slate-100'}`}
+                         >
+                            <span className="font-serif-luxury text-2xl uppercase tracking-widest">{displayMonth}</span>
+                            <div className={`p-2 rounded-full transition-transform duration-500 ${isExpanded ? 'bg-white/10 rotate-180' : 'bg-slate-200'}`}>
+                              <ChevronDown className="w-5 h-5" />
+                            </div>
+                         </button>
+                         
+                         {isExpanded && (
+                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in zoom-in-95 duration-500">
+                             {monthRecords.map(record => (
+                               <RecordCard 
+                                 key={record.id} 
+                                 record={record} 
+                                 lang={lang} 
+                                 isAdmin={isAdmin}
+                                 onDelete={handleDeleteRecord} 
+                               />
+                             ))}
+                           </div>
+                         )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-8 animate-in zoom-in duration-500 pb-10 w-full overflow-hidden">
-             <div className="bg-white p-12 rounded-[4.5rem] shadow-2xl space-y-12 flex flex-col min-h-[75vh] relative">
-                <h2 className="text-3xl font-black font-washi text-slate-900 uppercase tracking-tighter border-b-4 border-red-700 w-fit pb-2">{T.system}</h2>
+          <div className="space-y-10 animate-in zoom-in duration-500 pb-20">
+             <div className="bg-white p-12 rounded-[4rem] shadow-2xl space-y-12 flex flex-col min-h-[70vh] relative border border-slate-100">
+                <div className="flex items-center space-x-4 border-b border-slate-100 pb-8">
+                  <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
+                  <h2 className="text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.system}</h2>
+                </div>
                 
                 <div className="space-y-4">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block ml-2">{T.cloudEndpoint}</label>
-                  <input type="text" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="https://script.google.com/..." className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] text-xs font-bold outline-none focus:border-red-700 shadow-inner" />
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.cloudEndpoint}</label>
+                  <div className="relative">
+                    <Globe className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input type="text" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="https://script.google.com/..." className="w-full pl-16 pr-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all" />
+                  </div>
                 </div>
 
-                <button onClick={() => performCloudSync()} disabled={isSyncing} className="w-full bg-slate-900 h-28 rounded-[3.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-95 disabled:opacity-30 transition-all flex items-center justify-center border-b-8 border-slate-950 border-r-2 border-l-2 border-slate-800">
-                  <span className="text-white font-black text-xl uppercase tracking-[0.4em]">{isSyncing ? 'SYNCING...' : T.forceSync}</span>
+                <button onClick={() => performCloudSync()} disabled={isSyncing} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-28 rounded-[3.5rem] shadow-2xl active:scale-[0.98] disabled:opacity-30 transition-all flex items-center justify-center group overflow-hidden relative">
+                  <div className={`absolute inset-0 bg-amber-500 transition-transform duration-1000 ${isSyncing ? 'translate-x-0' : '-translate-x-full'}`} />
+                  <span className="relative z-10 font-serif-luxury text-2xl uppercase tracking-[0.3em] group-hover:tracking-[0.4em] transition-all">
+                    {isSyncing ? 'SYNCING...' : T.forceSync}
+                  </span>
                 </button>
                 
-                {lastSyncTime && <p className="text-center text-[11px] font-black text-slate-300 uppercase tracking-widest">{T.lastSync}: {lastSyncTime}</p>}
+                {lastSyncTime && (
+                  <div className="flex items-center justify-center space-x-3 text-slate-300">
+                    <Clock className="w-4 h-4" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">{T.lastSync}: {lastSyncTime}</p>
+                  </div>
+                )}
                 
-                <div className="mt-auto pt-24 text-center flex flex-col items-center">
-                   <div className="mb-12">
-                      <p className="text-[20px] font-black text-slate-900 uppercase tracking-[0.5em] mb-2 font-washi leading-none">WONDERLAND JAPAN</p>
-                      <div className="h-1.5 w-28 bg-red-700 mx-auto rounded-full mb-4" />
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">© All Rights Reserved 2025</p>
+                <div className="mt-auto pt-20 text-center flex flex-col items-center">
+                   <div className="mb-12 group">
+                      <p className="text-2xl font-serif-luxury text-slate-900 uppercase tracking-[0.4em] mb-4 transition-all group-hover:tracking-[0.5em]">WONDERLAND JAPAN</p>
+                      <div className="h-0.5 w-24 bg-amber-500 mx-auto rounded-full mb-6 opacity-50" />
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">© All Rights Reserved 2026</p>
                    </div>
                    
-                   <div className="opacity-40 transition-opacity hover:opacity-100 duration-1000">
-                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-[1em] mb-2 ml-3">DESIGNED BY</p>
-                      <p className="text-4xl font-signature text-slate-500 select-none transform -rotate-3">Benjamin Tang</p>
+                   <div className="opacity-30 transition-all hover:opacity-100 duration-1000 group">
+                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.8em] mb-2 ml-2">CRAFTED BY</p>
+                      <p className="text-5xl font-signature text-slate-400 select-none transform -rotate-2 group-hover:text-amber-600 transition-colors">Benjamin Tang</p>
                    </div>
                 </div>
 
                 {isAdmin && (
-                  <button onClick={handleLogout} className="w-full py-8 mt-10 text-red-400 text-xs font-black uppercase tracking-[0.4em] hover:bg-red-50 rounded-full transition-all">Sign Out</button>
+                  <button onClick={handleLogout} className="w-full py-6 mt-10 text-red-400 text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-red-50 rounded-full transition-all border border-transparent hover:border-red-100">
+                    Sign Out
+                  </button>
                 )}
              </div>
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-8 left-8 right-8 h-24 glass flex justify-around items-center rounded-full shadow-[0_40px_80px_rgba(0,0,0,0.4)] z-50 border border-white/70 px-8">
-        <button onClick={() => handleTabSwitch('upload')} className={`p-6 rounded-full transition-all duration-500 ${activeTab === 'upload' ? 'bg-red-700 text-white -translate-y-8 scale-150 shadow-2xl' : 'text-slate-300'}`}>
-          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-        </button>
-        <button onClick={() => handleTabSwitch('dashboard')} className={`p-6 rounded-full transition-all duration-500 ${activeTab === 'dashboard' ? 'bg-slate-900 text-amber-400 -translate-y-8 scale-150 shadow-2xl' : 'text-slate-300'}`}>
-          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 20h2v-8H7v8zm5 0h2v-5h-2v5zm5 0h2v-10h-2v10z" /></svg>
-        </button>
-        <button onClick={() => handleTabSwitch('history')} className={`p-6 rounded-full transition-all duration-500 ${activeTab === 'history' ? 'bg-slate-900 text-amber-400 -translate-y-8 scale-150 shadow-2xl' : 'text-slate-300'}`}>
-          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        </button>
-        <button onClick={() => handleTabSwitch('settings')} className={`p-6 rounded-full transition-all duration-500 ${activeTab === 'settings' ? 'bg-slate-900 text-amber-400 -translate-y-8 scale-150 shadow-2xl' : 'text-slate-300'}`}>
-          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37.996.608 2.296.07 2.572-1.065z" /></svg>
-        </button>
+      <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[calc(100%-4rem)] max-w-xl h-24 bg-slate-900/90 backdrop-blur-2xl flex justify-around items-center rounded-full shadow-[0_40px_80px_rgba(0,0,0,0.4)] z-50 border border-white/10 px-8">
+        {[
+          { id: 'upload', icon: Plus, label: T.upload },
+          { id: 'dashboard', icon: BarChart3, label: T.dashboard },
+          { id: 'history', icon: History, label: T.history },
+          { id: 'settings', icon: Settings, label: T.settings }
+        ].map(tab => (
+          <button 
+            key={tab.id}
+            onClick={() => handleTabSwitch(tab.id as any)} 
+            className={`p-5 rounded-full transition-all duration-500 relative group ${activeTab === tab.id ? 'bg-amber-500 text-slate-900 -translate-y-6 scale-125 shadow-[0_20px_40px_rgba(245,158,11,0.3)]' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            <tab.icon className="w-7 h-7" />
+            {activeTab === tab.id && (
+              <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-[10px] font-bold text-amber-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                {tab.label}
+              </span>
+            )}
+          </button>
+        ))}
       </nav>
     </div>
   );

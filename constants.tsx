@@ -17,9 +17,19 @@ export const TOUR_COLORS: Record<TourType, string> = {
   [TourType.KYOTO_FOOD]: '#5D4037',
   [TourType.OSAKA_FOOD]: '#1976D2',
   [TourType.FREE_TOUR]: '#006064',
+  [TourType.PRIVATE_TOUR]: '#6A1B9A',
 };
 
 export const GUIDES = ['Alvaro', 'Benjamin', 'Momoko', 'Nana', 'Honoka', 'Kaho'];
+
+export const CURRENCIES = [
+  { code: 'JPY', symbol: '¥', rate: 1 },
+  { code: 'USD', symbol: '$', rate: 150 },
+  { code: 'EUR', symbol: '€', rate: 160 },
+  { code: 'GBP', symbol: '£', rate: 190 },
+  { code: 'TWD', symbol: 'NT$', rate: 4.7 },
+  { code: 'CNY', symbol: '¥', rate: 21 },
+];
 
 export const TRANSLATIONS: Record<Language, any> = {
   ja: {
@@ -45,11 +55,11 @@ export const TRANSLATIONS: Record<Language, any> = {
     deletePasswordError: 'パスワードエラー',
     saveSuccess: '保存が完了しました',
     revenueError: '金額を入力してください',
-    aiInsights: '✦ AI 戦略インサイト',
-    aiAnalyzeBtn: '戦略レポートを生成',
-    aiAnalyzing: 'AI分析中...',
-    aiPlaceholder: '状況を分析します。',
-    aiError: '分析エラー',
+    statsTitle: '📊 ツアー統計分析',
+    statsRefreshBtn: '統計を更新',
+    statsLoading: '統計計算中...',
+    statsPlaceholder: 'データを選択してください。',
+    statsError: 'エラーが発生しました',
     yearly: '年度売上',
     quarterly: '四半期売上',
     monthly: '月間売上',
@@ -85,7 +95,8 @@ export const TRANSLATIONS: Record<Language, any> = {
       [TourType.ARASHIYAMA_WALK]: '嵐山ウォーキング',
       [TourType.KYOTO_FOOD]: '京都フードツアー',
       [TourType.OSAKA_FOOD]: '大阪フードツアー',
-      [TourType.FREE_TOUR]: '無料ツアー'
+      [TourType.FREE_TOUR]: '無料ツアー',
+      [TourType.PRIVATE_TOUR]: 'プライベートツアー'
     }
   },
   en: {
@@ -111,11 +122,11 @@ export const TRANSLATIONS: Record<Language, any> = {
     deletePasswordError: 'Error',
     saveSuccess: 'Record Saved!',
     revenueError: 'Enter amount',
-    aiInsights: '✦ AI Strategy Insight',
-    aiAnalyzeBtn: 'GENERATE STRATEGY REPORT',
-    aiAnalyzing: 'CONSULTING AI...',
-    aiPlaceholder: 'AI analysis here.',
-    aiError: 'Error',
+    statsTitle: '📊 Tour Stats Analysis',
+    statsRefreshBtn: 'REFRESH STATISTICS',
+    statsLoading: 'CALCULATING...',
+    statsPlaceholder: 'Select data to analyze.',
+    statsError: 'Error',
     yearly: 'Yearly Rev',
     quarterly: 'Quarterly Rev',
     monthly: 'Monthly Rev',
@@ -151,7 +162,8 @@ export const TRANSLATIONS: Record<Language, any> = {
       [TourType.ARASHIYAMA_WALK]: 'Arashiyama Walk',
       [TourType.KYOTO_FOOD]: 'Kyoto Food Tour',
       [TourType.OSAKA_FOOD]: 'Osaka Food Tour',
-      [TourType.FREE_TOUR]: 'Free Tour'
+      [TourType.FREE_TOUR]: 'Free Tour',
+      [TourType.PRIVATE_TOUR]: 'Private Tour'
     }
   }
 };
@@ -193,6 +205,11 @@ export const TOUR_ICONS: Record<TourType, React.ReactNode> = {
   [TourType.FREE_TOUR]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  [TourType.PRIVATE_TOUR]: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
     </svg>
   ),
 };
