@@ -24,7 +24,7 @@ export const TOUR_COLORS: Record<TourType, string> = {
   [TourType.PRIVATE_TOUR]: '#7B1FA2',
 };
 
-export const GUIDES = ['BENJAMIN', 'MOMOKO', 'ALVARO', 'YUMA'];
+export const GUIDES = ['Benjamin', 'Momoko', 'Alvaro', 'Yuma'];
 
 export const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbz_0W5gYm9A1_oTj-B7zL5_6_7_8_9/exec'; // Placeholder, user will replace if needed or I will find it
 
