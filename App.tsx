@@ -159,8 +159,10 @@ const App: React.FC = () => {
         }
         
         const savedUrl = localStorage.getItem('cloud_sync_url');
-        // Force the new URL if the saved one is the old placeholder or empty
-        if (!savedUrl || savedUrl.includes('AKfycbz_0W5gYm9A1_oTj-B7zL5_6_7_8_9')) {
+        // ALWAYS force the new URL if it's empty, or contains the old placeholder ID
+        // The old ID used 'AKfycbz_' prefix
+        if (!savedUrl || savedUrl.includes('AKfycbz_') || savedUrl === '' || savedUrl === 'https://script.google.com/macros/s/AKfycbz_0W5gYm9A1_oTj-B7zL5_6_7_8_9/exec') {
+          console.log("Updating to new Cloud Sync URL...");
           setCloudUrl(DEFAULT_CLOUD_URL);
           localStorage.setItem('cloud_sync_url', DEFAULT_CLOUD_URL);
         } else {
@@ -206,9 +208,9 @@ const App: React.FC = () => {
   const performCloudSync = async (showAlert = true, overrideData?: TourRecord[]) => {
     const dataToSync = overrideData || records;
     
-    // Fix logic: only block if explicitly empty or the generic placeholder string
-    if (!cloudUrl || cloudUrl.includes('AKfycbz_')) {
-      if (showAlert) alert(lang === 'ja' ? 'クラウド同期URLを設定してください（設定タブ內）。' : 'Please configure the Cloud Sync URL in Settings.');
+    // Fix logic: only block if explicitly empty or the old generic placeholder prefix
+    if (!cloudUrl || cloudUrl.includes('AKfycbz_') || cloudUrl === '') {
+      if (showAlert) alert(lang === 'ja' ? 'クラウド同期URLを設定してください（設定タブ内）。' : 'Please configure the Cloud Sync URL in Settings.');
       return;
     }
 
@@ -219,22 +221,24 @@ const App: React.FC = () => {
 
     setIsSyncing(true);
     try {
-      // Map data to include readable tour type names for Excel
+      // Map data to include raw keys for Excel and readable labels
       const mappedData = dataToSync.map(r => ({
         id: r.id,
         date: r.date,
-        type: T.tours[r.type] || r.type, // Map type to label directly for Excel
+        type: r.type, // RAW key (e.g. FREE_TOUR)
+        typeLabel: T.tours[r.type] || r.type,
         guide: r.guide,
         revenue: r.revenue,
         currency: r.currency,
         originalAmount: r.originalAmount,
         guests: r.guests,
         duration: r.duration,
-        createdAt: new Date(r.createdAt || Date.now()).toISOString(),
-        dateFormatted: formatDate(r.date, lang)
+        createdAt: new Date(r.createdAt || Date.now()).toISOString()
       }));
 
-      // We use simple POST to avoid CORS Preflight issues with Google Apps Script
+      console.log(`Attempting sync to: ${cloudUrl}`, { count: mappedData.length });
+
+      // Action 1: POST the data (Mode: no-cors is best for Google Apps Script to avoid preflight)
       await fetch(cloudUrl, { 
         method: 'POST', 
         mode: 'no-cors', 
@@ -242,31 +246,37 @@ const App: React.FC = () => {
         body: JSON.stringify({ action: 'sync', data: mappedData }) 
       });
 
-      // After sync, we try to fetch the updated data
+      console.log("POST request sent successfully (no-cors mode)");
+
+      // Action 2: Attempt to refresh local data (Optional, might fail due to CORS)
       try {
         const getResponse = await fetch(`${cloudUrl}?action=get`);
         if (getResponse.ok) {
           const cloudData = await getResponse.json();
-          if (Array.isArray(cloudData)) {
-            // Check if synced data is actually updated
+          if (Array.isArray(cloudData) && cloudData.length > 0) {
             const sanitized = cleanRecords(cloudData);
             const sorted = sanitized.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            
-            // Only update records if we got non-empty data back
-            if (sorted.length > 0) {
-              setRecords(sorted);
-            }
-            
+            setRecords(sorted);
             setLastSyncTime(new Date().toLocaleString('ja-JP'));
             if (showAlert) alert(T.syncSuccess);
+          } else {
+            // If we got empty or invalid data back, but POST was sent
+            setLastSyncTime(new Date().toLocaleString('ja-JP'));
+            if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました（取得データなし）。' : 'Sync request sent (no data returned).');
           }
-        } 
+        } else {
+          // Response not OK
+          setLastSyncTime(new Date().toLocaleString('ja-JP'));
+          if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました。' : 'Sync request sent.');
+        }
       } catch (getErr) {
-        // GET might fail due to CORS even if POST worked
+        console.log("GET refresh failed (likely CORS), but POST was attempted.", getErr);
+        setLastSyncTime(new Date().toLocaleString('ja-JP'));
         if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました。' : 'Sync request sent successfully.');
       }
     } catch (err) { 
-      if (showAlert) alert(T.syncError); 
+      console.error("Sync Error:", err);
+      if (showAlert) alert(T.syncError + (err instanceof Error ? `: ${err.message}` : '')); 
     } finally { 
       setIsSyncing(false); 
     }
@@ -275,9 +285,15 @@ const App: React.FC = () => {
   const handleDeleteRecord = (id: string) => {
     const pin = prompt(T.deletePasswordPrompt);
     if (pin === DELETE_PIN) {
-      const updated = records.filter(r => r.id !== id);
-      setRecords(updated);
-      if (autoSync && cloudUrl) performCloudSync(false, updated);
+      if (confirm(lang === 'ja' ? '本当に削除してクラウドと同期しますか？' : 'Are you sure you want to delete and sync with cloud?')) {
+        const updated = records.filter(r => r.id !== id);
+        setRecords(updated);
+        // Always attempt sync on deletion if cloudUrl is present to ensure Excel consistency
+        if (cloudUrl) {
+          console.log("Syncing after deletion...");
+          performCloudSync(false, updated);
+        }
+      }
     } else if (pin !== null) {
       alert(T.deletePasswordError);
     }
