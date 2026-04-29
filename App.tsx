@@ -298,12 +298,27 @@ const App: React.FC = () => {
     const pin = prompt(T.deletePasswordPrompt);
     if (pin === DELETE_PIN) {
       if (confirm(lang === 'ja' ? '本当に削除してクラウドと同期しますか？' : 'Are you sure you want to delete and sync with cloud?')) {
+        const deletedRecord = records.find(r => r.id === id);
         const updated = records.filter(r => r.id !== id);
         setRecords(updated);
-        // Always attempt sync on deletion if cloudUrl is present to ensure Excel consistency
-        if (cloudUrl) {
-          console.log("Syncing after deletion...");
-          performCloudSync(false, updated, true); // skipRefresh = true
+        
+        if (cloudUrl && !cloudUrl.includes('AKfycbz_') && cloudUrl !== '') {
+          console.log("Sending explicit delete request for ID:", id);
+          
+          // Step 1: Send targeted delete action
+          fetch(cloudUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ 
+              action: 'delete', 
+              id: id,
+              type: deletedRecord?.type, // Help script identify sheet
+              user: 'benjamintang0124@gmail.com'
+            })
+          }).catch(e => console.error("Delete request failed", e));
+          
+          // Step 2: Sync full state to keep consistency (skipping refresh to avoid bounce-back)
+          performCloudSync(false, updated, true);
         }
       }
     } else if (pin !== null) {
