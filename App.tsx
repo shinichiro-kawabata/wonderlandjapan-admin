@@ -199,23 +199,54 @@ const App: React.FC = () => {
 
   const performCloudSync = async (showAlert = true, overrideData?: TourRecord[]) => {
     const dataToSync = overrideData || records;
-    if (!cloudUrl || !cloudUrl.startsWith('https://script.google.com')) {
-      if (showAlert) alert(T.syncError);
+    
+    if (!cloudUrl || cloudUrl === DEFAULT_CLOUD_URL) {
+      if (showAlert) alert(lang === 'ja' ? 'クラウド同期URLを設定してください（設定タブ内）。' : 'Please configure the Cloud Sync URL in Settings.');
       return;
     }
+
+    if (!cloudUrl.startsWith('https://script.google.com')) {
+      if (showAlert) alert(T.syncError + ' (Invalid URL)');
+      return;
+    }
+
     setIsSyncing(true);
     try {
-      await fetch(cloudUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'sync', data: dataToSync }) });
-      const getResponse = await fetch(`${cloudUrl}?action=get`);
-      const cloudData = await getResponse.json();
-      if (Array.isArray(cloudData)) {
-        const sanitized = cleanRecords(cloudData);
-        const sorted = sanitized.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setRecords(sorted);
-        setLastSyncTime(new Date().toLocaleString('ja-JP'));
-        if (showAlert) alert(T.syncSuccess);
+      // We use simple POST to avoid CORS Preflight issues with Google Apps Script
+      // mode: 'no-cors' will send the request but we won't know if it succeeded from the response object
+      await fetch(cloudUrl, { 
+        method: 'POST', 
+        mode: 'no-cors', 
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'sync', data: dataToSync }) 
+      });
+
+      // After sync, we try to fetch the updated data
+      // This part might fail if CORS is not perfectly configured on the Apps Script side
+      try {
+        const getResponse = await fetch(`${cloudUrl}?action=get`);
+        if (getResponse.ok) {
+          const cloudData = await getResponse.json();
+          if (Array.isArray(cloudData)) {
+            const sanitized = cleanRecords(cloudData);
+            const sorted = sanitized.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setRecords(sorted);
+            setLastSyncTime(new Date().toLocaleString('ja-JP'));
+            if (showAlert) alert(T.syncSuccess);
+          }
+        } else {
+          // If GET fails but POST might have worked
+          if (showAlert) alert(lang === 'ja' ? '送信は送信されましたが、データの取得に失敗しました。CORS設定を確認してください。' : 'Data sent, but failed to fetch updates. Check CORS settings.');
+        }
+      } catch (getErr) {
+        // If we can't fetch back, we just notify that sync (POST) was attempted
+        if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました。' : 'Sync request sent.');
       }
-    } catch (err) { if (showAlert) alert(T.syncError); } finally { setIsSyncing(false); }
+    } catch (err) { 
+      if (showAlert) alert(T.syncError); 
+    } finally { 
+      setIsSyncing(false); 
+    }
   };
 
   const handleDeleteRecord = (id: string) => {
