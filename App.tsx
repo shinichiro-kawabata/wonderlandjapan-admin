@@ -205,7 +205,7 @@ const App: React.FC = () => {
     if (keys.length > 0 && expandedMonths.length === 0) setExpandedMonths([keys[0]]);
   }, [groupedHistoryByMonth]);
 
-  const performCloudSync = async (showAlert = true, overrideData?: TourRecord[]) => {
+  const performCloudSync = async (showAlert = true, overrideData?: TourRecord[], skipRefresh = false) => {
     const dataToSync = overrideData || records;
     
     // Fix logic: only block if explicitly empty or the old generic placeholder prefix
@@ -243,10 +243,22 @@ const App: React.FC = () => {
         method: 'POST', 
         mode: 'no-cors', 
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'sync', data: mappedData }) 
+        body: JSON.stringify({ 
+          action: 'sync', 
+          data: mappedData,
+          user: 'benjamintang0124@gmail.com',
+          timestamp: Date.now()
+        }) 
       });
 
       console.log("POST request sent successfully (no-cors mode)");
+
+      // If we are skipping refresh (e.g. after a delete), we stop here
+      if (skipRefresh) {
+        setLastSyncTime(new Date().toLocaleString('ja-JP'));
+        if (showAlert) alert(T.syncSuccess);
+        return;
+      }
 
       // Action 2: Attempt to refresh local data (Optional, might fail due to CORS)
       try {
@@ -291,7 +303,7 @@ const App: React.FC = () => {
         // Always attempt sync on deletion if cloudUrl is present to ensure Excel consistency
         if (cloudUrl) {
           console.log("Syncing after deletion...");
-          performCloudSync(false, updated);
+          performCloudSync(false, updated, true); // skipRefresh = true
         }
       }
     } else if (pin !== null) {
@@ -392,7 +404,7 @@ const App: React.FC = () => {
     // Auto sync
     if (autoSync && cloudUrl) {
       console.log("Auto-syncing after record add...");
-      performCloudSync(false, updated);
+      performCloudSync(false, updated, true); // skipRefresh = true
     }
   };
 
