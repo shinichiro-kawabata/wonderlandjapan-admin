@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TourType, TourRecord, Language, Currency } from './types';
-import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES, TOUR_ICONS, CURRENCIES } from './constants';
+import { TOUR_COLORS, TRANSLATIONS, NARA_COLORS, WonderlandLogo, GUIDES, TOUR_ICONS, CURRENCIES, DEFAULT_CLOUD_URL } from './constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { TrendingUp, Users, Map, Wallet, Calendar, Clock, ChevronDown, Trash2, LogOut, Globe, BarChart3, History, Settings, Plus, Sparkles, ArrowRight } from 'lucide-react';
+import { TrendingUp, Users, Map as MapIcon, Wallet, Calendar, Clock, ChevronDown, Trash2, LogOut, Globe, BarChart3, History, Settings, Plus, Sparkles, ArrowRight } from 'lucide-react';
 import { analyzeRecords } from './services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import { RecordCard } from './RecordCard';
@@ -40,15 +40,105 @@ const App: React.FC = () => {
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState(2025);
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
-  const [cloudUrl, setCloudUrl] = useState('');
+  const [cloudUrl, setCloudUrl] = useState(DEFAULT_CLOUD_URL);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-  const [autoSync, setAutoSync] = useState(false);
+  const [autoSync, setAutoSync] = useState(true);
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const T = TRANSLATIONS[lang] || TRANSLATIONS.ja;
   const YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
   const MONTHS_LIST = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  // CSV Export Logic
+  const handleExportCSV = () => {
+    if (records.length === 0) return;
+    setIsExporting(true);
+    try {
+      const headers = ['ID', 'Date', 'Type', 'Guide', 'Revenue(JPY)', 'Currency', 'OriginalAmount', 'Guests', 'Duration', 'CreatedAt'];
+      const rows = records.map(r => [
+        r.id,
+        r.date,
+        r.type,
+        r.guide,
+        r.revenue,
+        r.currency,
+        r.originalAmount,
+        r.guests,
+        r.duration,
+        new Date(r.createdAt || Date.now()).toISOString()
+      ]);
+
+      const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `wonderland_tours_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // CSV Import Logic
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',');
+        const importedRecords: TourRecord[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(',');
+          if (cols.length < 5) continue;
+          
+          importedRecords.push({
+            id: cols[0] || crypto.randomUUID(),
+            date: cols[1],
+            type: cols[2] as TourType,
+            guide: cols[3],
+            revenue: Number(cols[4]),
+            currency: (cols[5] as Currency) || 'JPY',
+            originalAmount: Number(cols[6] || cols[4]),
+            guests: Number(cols[7] || 1),
+            duration: Number(cols[8] || 3),
+            createdAt: cols[9] ? new Date(cols[9]).getTime() : Date.now()
+          });
+        }
+
+        const cleaned = cleanRecords(importedRecords);
+        const merged: TourRecord[] = [...cleaned, ...records];
+        // Remove duplicates by ID
+        const unique = Array.from(new window.Map(merged.map(item => [item.id, item])).values()) as TourRecord[];
+        setRecords([...unique].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        
+        if (autoSync && cloudUrl) {
+          performCloudSync(false, unique);
+        }
+        alert(lang === 'ja' ? 'インポート完了' : 'Import Complete');
+      } catch (err) {
+        alert(lang === 'ja' ? 'インポート失敗' : 'Import Failed');
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // 強化數據清理邏輯：過濾掉空行、0數據以及非法日期
   const cleanRecords = (raw: any[]): TourRecord[] => {
@@ -69,8 +159,11 @@ const App: React.FC = () => {
         }
         const savedUrl = localStorage.getItem('cloud_sync_url');
         if (savedUrl) setCloudUrl(savedUrl);
+        else setCloudUrl(DEFAULT_CLOUD_URL);
+        
         const savedAuto = localStorage.getItem('auto_sync');
         if (savedAuto) setAutoSync(savedAuto === 'true');
+        else setAutoSync(true);
         const savedAdmin = localStorage.getItem('is_admin');
         if (savedAdmin === 'true') setIsAdmin(true);
         setIsInitialLoadDone(true);
@@ -190,7 +283,7 @@ const App: React.FC = () => {
 
   const [formData, setFormData] = useState({ 
     date: new Date().toISOString().split('T')[0], 
-    type: TourType.GION_WALK, 
+    type: TourType.GION_KLOOK, 
     guide: GUIDES[0], 
     revenue: '', 
     currency: 'JPY' as Currency,
@@ -225,33 +318,42 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 w-full h-full flex flex-col overflow-hidden select-none" style={{ backgroundColor: NARA_COLORS.WASHI_CREAM }}>
-      <header className="p-4 md:p-8 pt-10 md:pt-14 rounded-b-[2rem] md:rounded-b-[3rem] shadow-2xl z-20 bg-slate-900 text-white shrink-0 border-b border-white/10">
-        <div className="flex justify-between items-center max-w-5xl mx-auto w-full">
-          <div className="flex items-center space-x-4 md:space-x-6">
-            <WonderlandLogo className="w-12 h-12 md:w-16 md:h-16" variant="red" /> 
-            <div>
-              <h1 className="text-xl md:text-3xl font-fashion font-bold leading-none tracking-[0.3em] uppercase">WONDERLAND</h1>
-              <p className="text-[8px] md:text-[10px] font-bold tracking-[0.5em] uppercase text-amber-500/80 mt-1">Japan Management</p>
+    <div className="fixed inset-0 w-full h-full flex flex-col overflow-hidden bg-[#FAF9F6] selection:bg-red-100">
+      <header className="px-6 py-4 md:px-12 md:py-6 shadow-sm z-30 bg-slate-900 text-white shrink-0">
+        <div className="flex justify-between items-center max-w-6xl mx-auto w-full">
+          <div className="flex items-center space-x-4 md:space-x-8">
+            <div className="relative group cursor-pointer" onClick={() => handleTabSwitch('upload')}>
+              <WonderlandLogo className="w-10 h-10 md:w-14 md:h-14 transition-luxury group-hover:scale-110" variant="red" />
+            </div>
+            <div className="hidden sm:block">
+              <h1 className="text-xl md:text-2xl font-fashion font-bold leading-none tracking-[0.4em] uppercase">WONDERLAND</h1>
+              <p className="text-[8px] md:text-[9px] font-bold tracking-[0.6em] uppercase text-amber-500 mt-1.5 opacity-80">JAPAN MANAGEMENT SYSTEM</p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-             {isAdmin && (
-               <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors p-2">
-                 <LogOut className="w-5 h-5" />
+          
+          <div className="flex items-center space-x-3 md:space-x-6">
+            {isSyncing && (
+              <div className="flex items-center space-x-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 animate-pulse">
+                <div className="loader !w-3 !h-3 !border-amber-500"></div>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-amber-500 hidden md:inline">Syncing</span>
+              </div>
+            )}
+            {isAdmin && (
+               <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-luxury p-2 bg-white/5 rounded-xl border border-white/5 hover:border-white/20">
+                 <LogOut className="w-4 h-4 md:w-5 h-5" />
                </button>
-             )}
+            )}
              <button 
                onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')} 
-               className="bg-white/5 hover:bg-white/10 px-5 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/10 transition-all"
+               className="bg-white/5 hover:bg-white/10 px-4 md:px-6 py-2 md:py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10 transition-luxury hover:scale-105 active:scale-95"
              >
-               {lang === 'ja' ? 'English' : '日本語'}
+               {lang === 'ja' ? 'EN' : 'JP'}
              </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 px-3 py-2 md:p-6 overflow-y-auto overflow-x-hidden no-scrollbar relative z-10 w-full max-w-5xl mx-auto pb-32 md:pb-44">
+      <main className="flex-1 w-full max-w-6xl mx-auto overflow-y-auto no-scrollbar relative z-10 px-4 md:px-6 pt-6 pb-40">
         {showLogin && (
           <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6">
              <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-in zoom-in duration-300">
@@ -271,12 +373,28 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'upload' && (
-          <div className="space-y-3 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
-            <div className="bg-white p-4 md:p-12 rounded-[1.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden">
-               <div className="flex items-center justify-between border-b border-slate-100 pb-2 md:pb-8 mb-1 md:mb-6">
+          <div className="space-y-6 md:space-y-12 animate-in fade-in slide-in-from-bottom-10">
+            <div className="bg-white p-6 md:p-14 lg:p-16 rounded-[2.5rem] md:rounded-[4rem] shadow-luxury border border-slate-100 relative overflow-hidden">
+               <div className="flex items-center justify-between border-b border-slate-50 pb-6 md:pb-10 mb-8 md:mb-12">
                 <div className="flex items-center space-x-4">
-                  <div className="w-1.5 h-8 md:h-10 bg-slate-900 rounded-full" />
-                  <h2 className="text-2xl md:text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.newRecord}</h2>
+                  <div className="w-1.5 h-8 md:h-12 bg-slate-900 rounded-full" />
+                  <h2 className="text-2xl md:text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.upload}</h2>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input 
+                    type="file" 
+                    accept=".csv" 
+                    ref={fileInputRef} 
+                    onChange={handleImportCSV} 
+                    className="hidden" 
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isImporting}
+                    className="flex items-center space-x-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-luxury border border-slate-100"
+                  >
+                    <span>{isImporting ? 'Importing...' : 'CSV Import'}</span>
+                  </button>
                 </div>
               </div>
 
@@ -306,7 +424,7 @@ const App: React.FC = () => {
                       label: T.tours?.[t] || t,
                       icon: TOUR_ICONS[t as TourType]
                     }))}
-                    icon={<Map className="w-5 h-5" />}
+                    icon={<MapIcon className="w-5 h-5" />}
                   />
                 </div>
 
@@ -392,39 +510,43 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'dashboard' && isAdmin && (
-          <div className="space-y-4 md:space-y-10 animate-in fade-in slide-in-from-right-10 pb-20">
-             <div className="flex flex-wrap gap-2 md:gap-3">
+          <div className="space-y-6 md:space-y-12 animate-in fade-in slide-in-from-right-10">
+             <div className="flex flex-wrap gap-2 md:gap-4 overflow-x-auto no-scrollbar py-2">
                 {YEARS.map(y => (
                   <button 
                     key={y} 
                     onClick={() => setSelectedYear(y)} 
-                    className={`px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-[10px] md:text-[11px] uppercase tracking-widest border transition-all ${selectedYear === y ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
+                    className={`px-6 md:px-10 py-2.5 md:py-3.5 rounded-full font-bold text-[10px] md:text-[11px] uppercase tracking-widest border transition-luxury whitespace-nowrap ${selectedYear === y ? 'bg-slate-900 text-white border-slate-900 shadow-luxury scale-105' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
                   >
                     {y}
                   </button>
                 ))}
              </div>
              
-             <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden relative">
-                <div className="flex justify-between items-end mb-4 md:mb-8 h-64 md:h-80 px-2 md:px-4 relative z-10">
+             <div className="bg-white p-8 md:p-14 lg:p-16 rounded-[2.5rem] md:rounded-[4.5rem] shadow-luxury border border-slate-100 relative">
+                <div className="flex justify-between items-end mb-8 md:mb-14 h-64 md:h-96 px-2 md:px-6 relative z-10 border-b border-slate-50">
                   {monthlyData.map((d) => (
-                    <div key={d.month} className="flex flex-col items-center flex-1 h-full justify-end relative group">
+                    <div key={d.month} className="flex flex-col items-center flex-1 h-full justify-end relative group px-1">
                       {d.rev > 0 && (
-                        <div className="absolute bottom-[calc(height+8px)] mb-2 flex flex-col items-center z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                           <span className="text-[10px] font-bold text-slate-900 bg-white px-2 py-1 rounded-lg shadow-xl border border-slate-100">¥{(d.rev/1000).toFixed(0)}k</span>
+                        <div className="absolute bottom-[calc(height+12px)] mb-2 flex flex-col items-center z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-luxury">
+                           <span className="text-[10px] font-bold text-slate-900 bg-white px-3 py-1.5 rounded-xl shadow-luxury border border-slate-100 whitespace-nowrap">¥{(d.rev/1000).toFixed(0)}k</span>
                         </div>
                       )}
                       
                       <div 
                         onClick={() => setSelectedMonth(d.month)} 
-                        className={`w-3/5 rounded-t-full rounded-b-xl transition-all duration-700 cursor-pointer relative ${selectedMonth === d.month ? 'ring-4 ring-amber-500/30 shadow-2xl scale-110 z-10' : 'opacity-30 hover:opacity-60'} ${d.isMax ? 'bg-gradient-to-t from-amber-600 to-amber-400' : 'bg-slate-900'}`} 
+                        className={`w-full max-w-[40px] rounded-t-2xl rounded-b-lg transition-luxury cursor-pointer relative ${selectedMonth === d.month ? 'ring-4 ring-amber-500/20 shadow-luxury scale-110 z-10' : 'opacity-20 hover:opacity-100'} ${d.isMax ? 'bg-gradient-to-t from-red-800 to-red-600' : 'bg-slate-900'}`} 
                         style={{ height: `${Math.max(d.height, 4)}%` }} 
                       />
-                      <span className={`text-[10px] font-bold mt-6 uppercase tracking-widest transition-colors ${selectedMonth === d.month ? 'text-amber-600' : 'text-slate-300'}`}>{T.months[d.month].substring(0, 3)}</span>
+                      <span className={`text-[9px] md:text-[10px] font-bold mt-4 md:mt-8 uppercase tracking-widest transition-luxury ${selectedMonth === d.month ? 'text-slate-900 bg-amber-400/20 px-2 py-0.5 rounded-full' : 'text-slate-400'}`}>{T.months[d.month].substring(0, 3)}</span>
                     </div>
                   ))}
                 </div>
-                <button onClick={() => setSelectedMonth('all')} className="w-full text-[11px] font-bold text-slate-400 border-t border-slate-50 pt-8 uppercase tracking-[0.3em] hover:text-slate-900 transition-colors">{T.viewFullYear}</button>
+                <button onClick={() => setSelectedMonth('all')} className="w-full text-[10px] font-bold text-slate-400 pt-8 uppercase tracking-[0.4em] hover:text-slate-900 transition-luxury group flex items-center justify-center space-x-4">
+                  <div className="h-0.5 flex-1 bg-slate-50 group-hover:bg-slate-100" />
+                  <span>{T.viewFullYear}</span>
+                  <div className="h-0.5 flex-1 bg-slate-50 group-hover:bg-slate-100" />
+                </button>
              </div>
 
              <div className="bg-slate-900 text-white p-12 rounded-[4.5rem] shadow-2xl relative overflow-hidden">
@@ -566,13 +688,20 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'history' && isAdmin && (
-          <div className="space-y-4 md:space-y-10 animate-in fade-in slide-in-from-bottom-10 pb-20">
-            <div className="bg-white p-4 md:p-10 rounded-[1.5rem] md:rounded-[4rem] shadow-2xl border border-slate-100">
-               <div className="flex items-center justify-between border-b border-slate-100 pb-2 md:pb-8 mb-4 md:mb-10">
+          <div className="space-y-6 md:space-y-12 animate-in fade-in slide-in-from-bottom-10">
+            <div className="bg-white p-6 md:p-14 lg:p-16 rounded-[2.5rem] md:rounded-[4.5rem] shadow-luxury border border-slate-100">
+               <div className="flex items-center justify-between border-b border-slate-50 pb-8 md:pb-12 mb-8 md:mb-14">
                 <div className="flex items-center space-x-4">
-                  <div className="w-1.5 h-8 md:h-10 bg-slate-900 rounded-full" />
-                  <h2 className="text-2xl md:text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.history}</h2>
+                  <div className="w-1.5 h-10 md:h-14 bg-slate-900 rounded-full" />
+                  <h2 className="text-3xl md:text-5xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.history}</h2>
                 </div>
+                <button 
+                  onClick={handleExportCSV}
+                  disabled={isExporting || records.length === 0}
+                  className="bg-slate-900 hover:bg-slate-800 text-white px-6 md:px-10 py-3 md:py-4 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-luxury transition-luxury disabled:opacity-30 active:scale-95"
+                >
+                  {isExporting ? 'Exporting...' : T.exportCSV}
+                </button>
               </div>
               
               <div className="space-y-12">
@@ -624,34 +753,64 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-4 md:space-y-10 animate-in zoom-in duration-500 pb-20">
-             <div className="bg-white p-6 md:p-12 rounded-[1.5rem] md:rounded-[4rem] shadow-2xl space-y-8 flex flex-col min-h-[70vh] relative border border-slate-100">
-                <div className="flex items-center space-x-4 border-b border-slate-100 pb-4 md:pb-8">
-                  <div className="w-1.5 h-10 bg-slate-900 rounded-full" />
-                  <h2 className="text-4xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.system}</h2>
+          <div className="space-y-6 md:space-y-12 animate-in zoom-in-95 duration-500">
+             <div className="bg-white p-8 md:p-16 lg:p-20 rounded-[3rem] md:rounded-[5rem] shadow-luxury space-y-10 border border-slate-50 relative">
+                <div className="flex items-center space-x-6 border-b border-slate-50 pb-8 md:pb-12">
+                  <div className="w-1.5 h-12 md:h-16 bg-slate-900 rounded-full" />
+                  <h2 className="text-4xl md:text-6xl font-serif-luxury font-medium text-slate-900 uppercase tracking-tight">{T.system}</h2>
                 </div>
                 
-                <div className="space-y-4">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] block ml-2">{T.cloudEndpoint}</label>
-                  <div className="relative">
-                    <Globe className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input type="text" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="https://script.google.com/..." className="w-full pl-16 pr-8 py-6 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-all" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16">
+                  <div className="space-y-6">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] block ml-4">{T.cloudEndpoint}</label>
+                    <div className="relative group">
+                      <Globe className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 group-focus-within:text-slate-900 transition-luxury" />
+                      <input 
+                        type="text" 
+                        value={cloudUrl} 
+                        onChange={e => {
+                          setCloudUrl(e.target.value);
+                          localStorage.setItem('cloud_sync_url', e.target.value);
+                        }} 
+                        placeholder="https://script.google.com/..." 
+                        className="w-full pl-20 pr-10 py-6 md:py-8 bg-slate-50 border border-slate-100 rounded-[3rem] text-sm font-bold outline-none focus:border-slate-900 shadow-inner transition-luxury" 
+                      />
+                    </div>
+                    <div className="flex items-center justify-between px-6 pt-4">
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{T.autoSync}</p>
+                       <button 
+                         onClick={() => {
+                           const newVal = !autoSync;
+                           setAutoSync(newVal);
+                           localStorage.setItem('auto_sync', String(newVal));
+                         }}
+                         className={`w-16 h-8 rounded-full p-1 transition-luxury ${autoSync ? 'bg-slate-900' : 'bg-slate-200'}`}
+                       >
+                         <div className={`w-6 h-6 bg-white rounded-full shadow-sm transition-luxury transform ${autoSync ? 'translate-x-8' : 'translate-x-0'}`} />
+                       </button>
+                    </div>
                   </div>
-                </div>
 
-                <button onClick={() => performCloudSync()} disabled={isSyncing} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-28 rounded-[3.5rem] shadow-2xl active:scale-[0.98] disabled:opacity-30 transition-all flex items-center justify-center group overflow-hidden relative">
-                  <div className={`absolute inset-0 bg-amber-500 transition-transform duration-1000 ${isSyncing ? 'translate-x-0' : '-translate-x-full'}`} />
-                  <span className="relative z-10 font-serif-luxury text-2xl uppercase tracking-[0.3em] group-hover:tracking-[0.4em] transition-all">
-                    {isSyncing ? 'SYNCING...' : T.forceSync}
-                  </span>
-                </button>
-                
-                {lastSyncTime && (
-                  <div className="flex items-center justify-center space-x-3 text-slate-300">
-                    <Clock className="w-4 h-4" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest">{T.lastSync}: {lastSyncTime}</p>
+                  <div className="space-y-8 flex flex-col justify-end">
+                    <button 
+                      onClick={() => performCloudSync()} 
+                      disabled={isSyncing} 
+                      className="w-full bg-slate-900 hover:bg-slate-800 text-white h-24 md:h-32 rounded-[3.5rem] shadow-luxury active:scale-[0.98] disabled:opacity-30 transition-luxury flex items-center justify-center group overflow-hidden relative"
+                    >
+                      <div className={`absolute inset-0 bg-red-600 transition-transform duration-1000 ${isSyncing ? 'translate-x-0' : '-translate-x-full'}`} />
+                      <span className="relative z-10 font-serif-luxury text-2xl md:text-3xl uppercase tracking-[0.4em] group-hover:tracking-[0.5em] transition-luxury">
+                        {isSyncing ? 'SYNCING...' : T.forceSync}
+                      </span>
+                    </button>
+                    
+                    {lastSyncTime && (
+                      <div className="flex items-center justify-center space-x-4 text-slate-300">
+                        <Clock className="w-5 h-5" />
+                        <p className="text-[11px] font-bold uppercase tracking-widest">{T.lastSync}: {lastSyncTime}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
                 
                 <div className="mt-auto pt-20 text-center flex flex-col items-center">
                    <div className="mb-12 group">
@@ -676,7 +835,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <nav className="fixed bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] md:w-[calc(100%-4rem)] max-w-xl h-20 md:h-24 bg-slate-900/90 backdrop-blur-2xl flex justify-around items-center rounded-full shadow-[0_40px_80px_rgba(0,0,0,0.4)] z-50 border border-white/10 px-4 md:px-8">
+      <nav className="fixed bottom-6 md:bottom-12 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] md:w-fit min-w-[320px] max-w-xl h-20 md:h-24 glass flex justify-around md:justify-center items-center rounded-full shadow-luxury z-50 px-4 md:px-12 md:gap-x-12 ring-1 ring-white/20">
         {[
           { id: 'upload', icon: Plus, label: T.upload },
           { id: 'dashboard', icon: BarChart3, label: T.dashboard },
@@ -686,14 +845,14 @@ const App: React.FC = () => {
           <button 
             key={tab.id}
             onClick={() => handleTabSwitch(tab.id as any)} 
-            className={`p-5 rounded-full transition-all duration-500 relative group ${activeTab === tab.id ? 'bg-amber-500 text-slate-900 -translate-y-6 scale-125 shadow-[0_20px_40px_rgba(245,158,11,0.3)]' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`p-5 rounded-full transition-luxury relative group w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${activeTab === tab.id ? 'bg-slate-900 text-white -translate-y-6 scale-125 shadow-luxury' : 'text-slate-400 hover:text-slate-900 hover:bg-black/5'}`}
           >
-            <tab.icon className="w-7 h-7" />
-            {activeTab === tab.id && (
-              <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-[10px] font-bold text-amber-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            <tab.icon className="w-6 h-6 md:w-7 md:h-7" />
+            <div className={`absolute -bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center transition-luxury duration-500 ${activeTab === tab.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+              <span className="text-[9px] font-bold text-slate-900 uppercase tracking-[0.3em] whitespace-nowrap bg-white/80 backdrop-blur px-3 py-1 rounded-full shadow-luxury border border-slate-100">
                 {tab.label}
               </span>
-            )}
+            </div>
           </button>
         ))}
       </nav>

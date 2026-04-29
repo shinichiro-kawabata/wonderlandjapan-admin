@@ -12,15 +12,19 @@ export const NARA_COLORS = {
 };
 
 export const TOUR_COLORS: Record<TourType, string> = {
-  [TourType.GION_WALK]: '#AF2020', 
-  [TourType.ARASHIYAMA_WALK]: '#1B5E20',
-  [TourType.KYOTO_FOOD]: '#5D4037',
-  [TourType.OSAKA_FOOD]: '#1976D2',
-  [TourType.FREE_TOUR]: '#006064',
-  [TourType.PRIVATE_TOUR]: '#6A1B9A',
+  [TourType.GION_KLOOK]: '#AF2020',
+  [TourType.GION_VIATOR]: '#D32F2F',
+  [TourType.GION_GYG]: '#E53935',
+  [TourType.ARASHIYAMA_KLOOK]: '#1B5E20',
+  [TourType.ARASHIYAMA_VIATOR]: '#2E7D32',
+  [TourType.ARASHIYAMA_GYG]: '#388E3C',
+  [TourType.FOOD_TOUR_KYOTO_KLOOK]: '#5D4037',
+  [TourType.FOOD_TOUR_KYOTO_VIATOR]: '#795548',
 };
 
-export const GUIDES = ['Alvaro', 'Benjamin', 'Momoko', 'Nana', 'Honoka', 'Kaho'];
+export const GUIDES = ['YUMA', 'ALVARO', 'MOMOKO', 'BENJAMIN'];
+
+export const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbz_0W5gYm9A1_oTj-B7zL5_6_7_8_9/exec'; // Placeholder, user will replace if needed or I will find it
 
 export const CURRENCIES = [
   { code: 'JPY', symbol: '¥', rate: 1 },
@@ -91,12 +95,14 @@ export const TRANSLATIONS: Record<Language, any> = {
     preLaunchDesc: 'WonderlandJapan は2025年9月より統計を開始しました。',
     months: ["", "1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
     tours: {
-      [TourType.GION_WALK]: '祇園ウォーキング',
-      [TourType.ARASHIYAMA_WALK]: '嵐山ウォーキング',
-      [TourType.KYOTO_FOOD]: '京都フードツアー',
-      [TourType.OSAKA_FOOD]: '大阪フードツアー',
-      [TourType.FREE_TOUR]: '無料ツアー',
-      [TourType.PRIVATE_TOUR]: 'プライベートツアー'
+      [TourType.GION_KLOOK]: 'Gion Klook',
+      [TourType.GION_VIATOR]: 'Gion Viator',
+      [TourType.GION_GYG]: 'Gion GYG',
+      [TourType.ARASHIYAMA_KLOOK]: 'Arashiyama Klook',
+      [TourType.ARASHIYAMA_VIATOR]: 'Arashiyama Viator',
+      [TourType.ARASHIYAMA_GYG]: 'Arashiyama GYG',
+      [TourType.FOOD_TOUR_KYOTO_KLOOK]: 'Food Tour Kyoto Klook',
+      [TourType.FOOD_TOUR_KYOTO_VIATOR]: 'Food Tour Kyoto Viator'
     }
   },
   en: {
@@ -158,12 +164,14 @@ export const TRANSLATIONS: Record<Language, any> = {
     preLaunchDesc: 'Wonderland operation begins Sept 2025.',
     months: ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
     tours: {
-      [TourType.GION_WALK]: 'Gion Walk',
-      [TourType.ARASHIYAMA_WALK]: 'Arashiyama Walk',
-      [TourType.KYOTO_FOOD]: 'Kyoto Food Tour',
-      [TourType.OSAKA_FOOD]: 'Osaka Food Tour',
-      [TourType.FREE_TOUR]: 'Free Tour',
-      [TourType.PRIVATE_TOUR]: 'Private Tour'
+      [TourType.GION_KLOOK]: 'Gion Klook',
+      [TourType.GION_VIATOR]: 'Gion Viator',
+      [TourType.GION_GYG]: 'Gion GYG',
+      [TourType.ARASHIYAMA_KLOOK]: 'Arashiyama Klook',
+      [TourType.ARASHIYAMA_VIATOR]: 'Arashiyama Viator',
+      [TourType.ARASHIYAMA_GYG]: 'Arashiyama GYG',
+      [TourType.FOOD_TOUR_KYOTO_KLOOK]: 'Food Tour Kyoto Klook',
+      [TourType.FOOD_TOUR_KYOTO_VIATOR]: 'Food Tour Kyoto Viator'
     }
   }
 };
@@ -192,30 +200,32 @@ export const WonderlandLogo = ({ className = "w-12 h-12", variant = "light" }) =
 );
 
 export const TOUR_ICONS: Record<TourType, React.ReactNode> = {
-  [TourType.GION_WALK]: <WonderlandLogo className="w-6 h-6" />,
-  [TourType.ARASHIYAMA_WALK]: (
+  [TourType.GION_KLOOK]: <WonderlandLogo className="w-6 h-6" />,
+  [TourType.GION_VIATOR]: <WonderlandLogo className="w-6 h-6" />,
+  [TourType.GION_GYG]: <WonderlandLogo className="w-6 h-6" />,
+  [TourType.ARASHIYAMA_KLOOK]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
     </svg>
   ),
-  [TourType.KYOTO_FOOD]: (
+  [TourType.ARASHIYAMA_VIATOR]: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  ),
+  [TourType.ARASHIYAMA_GYG]: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  ),
+  [TourType.FOOD_TOUR_KYOTO_KLOOK]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
     </svg>
   ),
-  [TourType.OSAKA_FOOD]: (
+  [TourType.FOOD_TOUR_KYOTO_VIATOR]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  ),
-  [TourType.FREE_TOUR]: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  [TourType.PRIVATE_TOUR]: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
     </svg>
   ),
 };
