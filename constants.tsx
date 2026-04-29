@@ -20,9 +20,11 @@ export const TOUR_COLORS: Record<TourType, string> = {
   [TourType.ARASHIYAMA_GYG]: '#388E3C',
   [TourType.FOOD_TOUR_KYOTO_KLOOK]: '#5D4037',
   [TourType.FOOD_TOUR_KYOTO_VIATOR]: '#795548',
+  [TourType.FREE_TOUR]: '#0288D1',
+  [TourType.PRIVATE_TOUR]: '#7B1FA2',
 };
 
-export const GUIDES = ['YUMA', 'ALVARO', 'MOMOKO', 'BENJAMIN'];
+export const GUIDES = ['BENJAMIN', 'MOMOKO', 'ALVARO', 'YUMA'];
 
 export const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbz_0W5gYm9A1_oTj-B7zL5_6_7_8_9/exec'; // Placeholder, user will replace if needed or I will find it
 
@@ -102,7 +104,9 @@ export const TRANSLATIONS: Record<Language, any> = {
       [TourType.ARASHIYAMA_VIATOR]: 'Arashiyama Viator',
       [TourType.ARASHIYAMA_GYG]: 'Arashiyama GYG',
       [TourType.FOOD_TOUR_KYOTO_KLOOK]: 'Food Tour Kyoto Klook',
-      [TourType.FOOD_TOUR_KYOTO_VIATOR]: 'Food Tour Kyoto Viator'
+      [TourType.FOOD_TOUR_KYOTO_VIATOR]: 'Food Tour Kyoto Viator',
+      [TourType.FREE_TOUR]: 'Free Tour',
+      [TourType.PRIVATE_TOUR]: 'Private Tour'
     }
   },
   en: {
@@ -171,7 +175,9 @@ export const TRANSLATIONS: Record<Language, any> = {
       [TourType.ARASHIYAMA_VIATOR]: 'Arashiyama Viator',
       [TourType.ARASHIYAMA_GYG]: 'Arashiyama GYG',
       [TourType.FOOD_TOUR_KYOTO_KLOOK]: 'Food Tour Kyoto Klook',
-      [TourType.FOOD_TOUR_KYOTO_VIATOR]: 'Food Tour Kyoto Viator'
+      [TourType.FOOD_TOUR_KYOTO_VIATOR]: 'Food Tour Kyoto Viator',
+      [TourType.FREE_TOUR]: 'Free Tour',
+      [TourType.PRIVATE_TOUR]: 'Private Tour'
     }
   }
 };
@@ -226,6 +232,16 @@ export const TOUR_ICONS: Record<TourType, React.ReactNode> = {
   [TourType.FOOD_TOUR_KYOTO_VIATOR]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  ),
+  [TourType.FREE_TOUR]: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  [TourType.PRIVATE_TOUR]: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   ),
 };
