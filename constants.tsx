@@ -15,6 +15,7 @@ export const TOUR_COLORS: Record<TourType, string> = {
   [TourType.GION_KLOOK]: '#AF2020',
   [TourType.GION_VIATOR]: '#D32F2F',
   [TourType.GION_GYG]: '#E53935',
+  [TourType.GION_WALK]: '#C62828',
   [TourType.ARASHIYAMA_KLOOK]: '#1B5E20',
   [TourType.ARASHIYAMA_VIATOR]: '#2E7D32',
   [TourType.ARASHIYAMA_GYG]: '#388E3C',
@@ -209,6 +210,11 @@ export const TOUR_ICONS: Record<TourType, React.ReactNode> = {
   [TourType.GION_KLOOK]: <WonderlandLogo className="w-6 h-6" />,
   [TourType.GION_VIATOR]: <WonderlandLogo className="w-6 h-6" />,
   [TourType.GION_GYG]: <WonderlandLogo className="w-6 h-6" />,
+  [TourType.GION_WALK]: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  ),
   [TourType.ARASHIYAMA_KLOOK]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />

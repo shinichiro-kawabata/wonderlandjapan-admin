@@ -159,10 +159,11 @@ const App: React.FC = () => {
         }
         
         const savedUrl = localStorage.getItem('cloud_sync_url');
-        // ALWAYS force the new URL if it's empty, or contains the old placeholder ID
-        // The old ID used 'AKfycbz_' prefix
+        let currentUrl = savedUrl;
+        
         if (!savedUrl || savedUrl.includes('AKfycbz_') || savedUrl === '' || savedUrl === 'https://script.google.com/macros/s/AKfycbz_0W5gYm9A1_oTj-B7zL5_6_7_8_9/exec') {
           console.log("Updating to new Cloud Sync URL...");
+          currentUrl = DEFAULT_CLOUD_URL;
           setCloudUrl(DEFAULT_CLOUD_URL);
           localStorage.setItem('cloud_sync_url', DEFAULT_CLOUD_URL);
         } else {
@@ -174,7 +175,13 @@ const App: React.FC = () => {
         else setAutoSync(true);
         const savedAdmin = localStorage.getItem('is_admin');
         if (savedAdmin === 'true') setIsAdmin(true);
+        
         setIsInitialLoadDone(true);
+
+        // STARTUP PULL: Automatically fetch from Cloud to get latest truth
+        if (currentUrl && !currentUrl.includes('AKfycbz_')) {
+          fetchCloudData(currentUrl);
+        }
       } catch (e) { setIsInitialLoadDone(true); }
     };
     init();
@@ -205,12 +212,38 @@ const App: React.FC = () => {
     if (keys.length > 0 && expandedMonths.length === 0) setExpandedMonths([keys[0]]);
   }, [groupedHistoryByMonth]);
 
+  const fetchCloudData = async (urlOverride?: string, showAlert = false) => {
+    const targetUrl = urlOverride || cloudUrl;
+    if (!targetUrl || targetUrl.includes('AKfycbz_') || targetUrl === '') return;
+    
+    setIsSyncing(true);
+    try {
+      console.log("Fetching latest data from Cloud (Pull)...");
+      const getResponse = await fetch(`${targetUrl}?action=get`);
+      if (getResponse.ok) {
+        const cloudData = await getResponse.json();
+        if (Array.isArray(cloudData)) {
+          const sanitized = cleanRecords(cloudData);
+          const sorted = sanitized.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setRecords(sorted);
+          setLastSyncTime(new Date().toLocaleString('ja-JP'));
+          if (showAlert) alert(lang === 'ja' ? '最新データを取得しました。' : 'Latest data fetched.');
+        }
+      }
+    } catch (err) {
+      console.error("Fetch Error:", err);
+      if (showAlert) alert(lang === 'ja' ? 'データ取得に失敗しました。' : 'Failed to fetch data.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const performCloudSync = async (showAlert = true, overrideData?: TourRecord[], skipRefresh = false) => {
     const dataToSync = overrideData || records;
     
     // Fix logic: only block if explicitly empty or the old generic placeholder prefix
     if (!cloudUrl || cloudUrl.includes('AKfycbz_') || cloudUrl === '') {
-      if (showAlert) alert(lang === 'ja' ? 'クラウド同期URLを設定してください（設定タブ内）。' : 'Please configure the Cloud Sync URL in Settings.');
+      if (showAlert) alert(lang === 'ja' ? 'クラウド同期URLを設定してください（設定タブ內）。' : 'Please configure the Cloud Sync URL in Settings.');
       return;
     }
 
@@ -236,9 +269,9 @@ const App: React.FC = () => {
         createdAt: new Date(r.createdAt || Date.now()).toISOString()
       }));
 
-      console.log(`Attempting sync to: ${cloudUrl}`, { count: mappedData.length });
+      console.log(`Syncing state to Excel (Push): ${cloudUrl}`, { count: mappedData.length });
 
-      // Action 1: POST the data (Mode: no-cors is best for Google Apps Script to avoid preflight)
+      // Action 1: POST the data
       await fetch(cloudUrl, { 
         method: 'POST', 
         mode: 'no-cors', 
@@ -251,40 +284,12 @@ const App: React.FC = () => {
         }) 
       });
 
-      console.log("POST request sent successfully (no-cors mode)");
-
-      // If we are skipping refresh (e.g. after a delete), we stop here
-      if (skipRefresh) {
-        setLastSyncTime(new Date().toLocaleString('ja-JP'));
-        if (showAlert) alert(T.syncSuccess);
-        return;
-      }
-
-      // Action 2: Attempt to refresh local data (Optional, might fail due to CORS)
-      try {
-        const getResponse = await fetch(`${cloudUrl}?action=get`);
-        if (getResponse.ok) {
-          const cloudData = await getResponse.json();
-          if (Array.isArray(cloudData) && cloudData.length > 0) {
-            const sanitized = cleanRecords(cloudData);
-            const sorted = sanitized.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setRecords(sorted);
-            setLastSyncTime(new Date().toLocaleString('ja-JP'));
-            if (showAlert) alert(T.syncSuccess);
-          } else {
-            // If we got empty or invalid data back, but POST was sent
-            setLastSyncTime(new Date().toLocaleString('ja-JP'));
-            if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました（取得データなし）。' : 'Sync request sent (no data returned).');
-          }
-        } else {
-          // Response not OK
-          setLastSyncTime(new Date().toLocaleString('ja-JP'));
-          if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました。' : 'Sync request sent.');
-        }
-      } catch (getErr) {
-        console.log("GET refresh failed (likely CORS), but POST was attempted.", getErr);
-        setLastSyncTime(new Date().toLocaleString('ja-JP'));
-        if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました。' : 'Sync request sent successfully.');
+      setLastSyncTime(new Date().toLocaleString('ja-JP'));
+      if (showAlert) alert(T.syncSuccess);
+      
+      // If we are not skipping refresh, we pull back the state
+      if (!skipRefresh) {
+        fetchCloudData();
       }
     } catch (err) { 
       console.error("Sync Error:", err);
@@ -305,20 +310,27 @@ const App: React.FC = () => {
         if (cloudUrl && !cloudUrl.includes('AKfycbz_') && cloudUrl !== '') {
           console.log("Sending explicit delete request for ID:", id);
           
-          // Step 1: Send targeted delete action
+          const deletedRecord = records.find(r => r.id === id);
+          
+          // Action: Attempt both targeted delete and state rewrite
+          const deletePayload = { 
+            action: 'delete', 
+            id: id,
+            type: deletedRecord?.type, 
+            user: 'benjamintang0124@gmail.com'
+          };
+
           fetch(cloudUrl, {
             method: 'POST',
             mode: 'no-cors',
-            body: JSON.stringify({ 
-              action: 'delete', 
-              id: id,
-              type: deletedRecord?.type, // Help script identify sheet
-              user: 'benjamintang0124@gmail.com'
-            })
-          }).catch(e => console.error("Delete request failed", e));
-          
-          // Step 2: Sync full state to keep consistency (skipping refresh to avoid bounce-back)
-          performCloudSync(false, updated, true);
+            body: JSON.stringify(deletePayload)
+          }).then(() => {
+            console.log("Internal delete request sent, now pushing full state...");
+            performCloudSync(false, updated);
+          }).catch(e => {
+            console.error("Delete request failed", e);
+            performCloudSync(false, updated);
+          });
         }
       }
     } else if (pin !== null) {
@@ -420,6 +432,18 @@ const App: React.FC = () => {
     if (autoSync && cloudUrl) {
       console.log("Auto-syncing after record add...");
       performCloudSync(false, updated, true); // skipRefresh = true
+    }
+  };
+
+  const handleManualSync = () => {
+    // Manually push current state to Excel
+    performCloudSync(true, undefined, true);
+  };
+
+  const handleManualFetch = () => {
+    // Manually pull data from Excel
+    if (confirm(lang === 'ja' ? 'Excelから最新のデータを取得しますか？' : 'Fetch latest data from Excel?')) {
+      fetchCloudData(undefined, true);
     }
   };
 
@@ -897,17 +921,28 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-8 flex flex-col justify-end">
-                    <button 
-                      onClick={() => performCloudSync()} 
-                      disabled={isSyncing} 
-                      className="w-full bg-slate-900 hover:bg-slate-800 text-white h-24 md:h-32 rounded-[3.5rem] shadow-luxury active:scale-[0.98] disabled:opacity-30 transition-luxury flex items-center justify-center group overflow-hidden relative"
-                    >
-                      <div className={`absolute inset-0 bg-red-600 transition-transform duration-1000 ${isSyncing ? 'translate-x-0' : '-translate-x-full'}`} />
-                      <span className="relative z-10 font-serif-luxury text-2xl md:text-3xl uppercase tracking-[0.4em] group-hover:tracking-[0.5em] transition-luxury">
-                        {isSyncing ? 'SYNCING...' : T.forceSync}
-                      </span>
-                    </button>
+                  <div className="space-y-6 flex flex-col justify-end">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <button 
+                        onClick={handleManualFetch} 
+                        disabled={isSyncing} 
+                        className="bg-blue-600 hover:bg-blue-500 text-white h-24 md:h-32 rounded-[2rem] shadow-luxury active:scale-[0.98] disabled:opacity-30 transition-luxury flex items-center justify-center"
+                      >
+                        <span className="font-serif-luxury text-xl md:text-2xl uppercase tracking-[0.2em]">
+                          {isSyncing ? '...' : (lang === 'ja' ? '取得 (PULL)' : 'PULL FROM CLOUD')}
+                        </span>
+                      </button>
+                      <button 
+                        onClick={handleManualSync} 
+                        disabled={isSyncing} 
+                        className="bg-slate-900 hover:bg-slate-800 text-white h-24 md:h-32 rounded-[2.5rem] shadow-luxury active:scale-[0.98] disabled:opacity-30 transition-luxury flex items-center justify-center group overflow-hidden relative"
+                      >
+                        <div className={`absolute inset-0 bg-red-600 transition-transform duration-1000 ${isSyncing ? 'translate-x-0' : '-translate-x-full'}`} />
+                        <span className="relative z-10 font-serif-luxury text-xl md:text-2xl uppercase tracking-[0.2em] group-hover:tracking-[0.3em] transition-luxury">
+                          {isSyncing ? 'SYNCING...' : (lang === 'ja' ? '同期 (PUSH)' : 'PUSH TO CLOUD')}
+                        </span>
+                      </button>
+                    </div>
                     
                     {lastSyncTime && (
                       <div className="flex items-center justify-center space-x-4 text-slate-300">
