@@ -26,7 +26,7 @@ export const TOUR_COLORS: Record<TourType, string> = {
 
 export const GUIDES = ['Benjamin', 'Momoko', 'Alvaro', 'Yuma'];
 
-export const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbz_0W5gYm9A1_oTj-B7zL5_6_7_8_9/exec'; // Placeholder, user will replace if needed or I will find it
+export const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbxkNiMeXzQ8-6RWHJISzZfdEk4VpWSHLtwniXWupo2L4YU3lbHW6gP1vsCs0lhEYxGEbg/exec';
 
 export const CURRENCIES = [
   { code: 'JPY', symbol: '¥', rate: 1 },

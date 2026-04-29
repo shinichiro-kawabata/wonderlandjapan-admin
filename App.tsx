@@ -157,9 +157,15 @@ const App: React.FC = () => {
           const parsed = JSON.parse(savedRecords);
           if (Array.isArray(parsed)) setRecords(cleanRecords(parsed));
         }
+        
         const savedUrl = localStorage.getItem('cloud_sync_url');
-        if (savedUrl) setCloudUrl(savedUrl);
-        else setCloudUrl(DEFAULT_CLOUD_URL);
+        // Force the new URL if the saved one is the old placeholder or empty
+        if (!savedUrl || savedUrl.includes('AKfycbz_0W5gYm9A1_oTj-B7zL5_6_7_8_9')) {
+          setCloudUrl(DEFAULT_CLOUD_URL);
+          localStorage.setItem('cloud_sync_url', DEFAULT_CLOUD_URL);
+        } else {
+          setCloudUrl(savedUrl);
+        }
         
         const savedAuto = localStorage.getItem('auto_sync');
         if (savedAuto) setAutoSync(savedAuto === 'true');
@@ -343,9 +349,18 @@ const App: React.FC = () => {
     };
     const updated = [newRecord, ...records];
     setRecords(updated);
+    
+    // Reset form immediately for UI responsiveness
     setFormData({ ...formData, revenue: '', originalAmount: 0, guests: '1', duration: 3 });
+    
+    // Notify user
     alert(T.saveSuccess);
-    if (autoSync && cloudUrl) performCloudSync(false, updated);
+    
+    // Auto sync
+    if (autoSync && cloudUrl) {
+      console.log("Auto-syncing after record add...");
+      performCloudSync(false, updated);
+    }
   };
 
   return (
