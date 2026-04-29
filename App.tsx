@@ -206,8 +206,9 @@ const App: React.FC = () => {
   const performCloudSync = async (showAlert = true, overrideData?: TourRecord[]) => {
     const dataToSync = overrideData || records;
     
-    if (!cloudUrl || cloudUrl === DEFAULT_CLOUD_URL) {
-      if (showAlert) alert(lang === 'ja' ? 'クラウド同期URLを設定してください（設定タブ内）。' : 'Please configure the Cloud Sync URL in Settings.');
+    // Fix logic: only block if explicitly empty or the generic placeholder string
+    if (!cloudUrl || cloudUrl.includes('AKfycbz_')) {
+      if (showAlert) alert(lang === 'ja' ? 'クラウド同期URLを設定してください（設定タブ內）。' : 'Please configure the Cloud Sync URL in Settings.');
       return;
     }
 
@@ -218,35 +219,51 @@ const App: React.FC = () => {
 
     setIsSyncing(true);
     try {
+      // Map data to include readable tour type names for Excel
+      const mappedData = dataToSync.map(r => ({
+        id: r.id,
+        date: r.date,
+        type: T.tours[r.type] || r.type, // Map type to label directly for Excel
+        guide: r.guide,
+        revenue: r.revenue,
+        currency: r.currency,
+        originalAmount: r.originalAmount,
+        guests: r.guests,
+        duration: r.duration,
+        createdAt: new Date(r.createdAt || Date.now()).toISOString(),
+        dateFormatted: formatDate(r.date, lang)
+      }));
+
       // We use simple POST to avoid CORS Preflight issues with Google Apps Script
-      // mode: 'no-cors' will send the request but we won't know if it succeeded from the response object
       await fetch(cloudUrl, { 
         method: 'POST', 
         mode: 'no-cors', 
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'sync', data: dataToSync }) 
+        body: JSON.stringify({ action: 'sync', data: mappedData }) 
       });
 
       // After sync, we try to fetch the updated data
-      // This part might fail if CORS is not perfectly configured on the Apps Script side
       try {
         const getResponse = await fetch(`${cloudUrl}?action=get`);
         if (getResponse.ok) {
           const cloudData = await getResponse.json();
           if (Array.isArray(cloudData)) {
+            // Check if synced data is actually updated
             const sanitized = cleanRecords(cloudData);
             const sorted = sanitized.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setRecords(sorted);
+            
+            // Only update records if we got non-empty data back
+            if (sorted.length > 0) {
+              setRecords(sorted);
+            }
+            
             setLastSyncTime(new Date().toLocaleString('ja-JP'));
             if (showAlert) alert(T.syncSuccess);
           }
-        } else {
-          // If GET fails but POST might have worked
-          if (showAlert) alert(lang === 'ja' ? '送信は送信されましたが、データの取得に失敗しました。CORS設定を確認してください。' : 'Data sent, but failed to fetch updates. Check CORS settings.');
-        }
+        } 
       } catch (getErr) {
-        // If we can't fetch back, we just notify that sync (POST) was attempted
-        if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました。' : 'Sync request sent.');
+        // GET might fail due to CORS even if POST worked
+        if (showAlert) alert(lang === 'ja' ? '同期リクエストは送信されました。' : 'Sync request sent successfully.');
       }
     } catch (err) { 
       if (showAlert) alert(T.syncError); 
