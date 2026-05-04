@@ -254,33 +254,27 @@ const App: React.FC = () => {
 
     setIsSyncing(true);
     try {
-      // Map data to include raw keys for Excel and readable labels
+      // Map data to match Excel columns: ID, Date, Type, Guide, Revenue, Guests, Duration
       const mappedData = dataToSync.map(r => ({
         id: r.id,
         date: r.date,
-        type: r.type, // RAW key (e.g. FREE_TOUR)
-        typeLabel: T.tours[r.type] || r.type,
+        type: r.type, 
         guide: r.guide,
         revenue: r.revenue,
-        currency: r.currency,
-        originalAmount: r.originalAmount,
         guests: r.guests,
-        duration: r.duration,
-        createdAt: new Date(r.createdAt || Date.now()).toISOString()
+        duration: r.duration
       }));
 
-      console.log(`Syncing state to Excel (Push): ${cloudUrl}`, { count: mappedData.length });
+      console.log(`Pushing state to Excel: ${cloudUrl}`, { count: mappedData.length });
 
-      // Action 1: POST the data
+      // Action 1: POST the data (Mode: no-cors is best for Google Apps Script to avoid preflight)
       await fetch(cloudUrl, { 
         method: 'POST', 
         mode: 'no-cors', 
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ 
           action: 'sync', 
-          data: mappedData,
-          user: 'benjamintang0124@gmail.com',
-          timestamp: Date.now()
+          data: mappedData
         }) 
       });
 
@@ -303,34 +297,13 @@ const App: React.FC = () => {
     const pin = prompt(T.deletePasswordPrompt);
     if (pin === DELETE_PIN) {
       if (confirm(lang === 'ja' ? '本当に削除してクラウドと同期しますか？' : 'Are you sure you want to delete and sync with cloud?')) {
-        const deletedRecord = records.find(r => r.id === id);
         const updated = records.filter(r => r.id !== id);
         setRecords(updated);
         
+        // Single robust sync: push the new state to Excel
         if (cloudUrl && !cloudUrl.includes('AKfycbz_') && cloudUrl !== '') {
-          console.log("Sending explicit delete request for ID:", id);
-          
-          const deletedRecord = records.find(r => r.id === id);
-          
-          // Action: Attempt both targeted delete and state rewrite
-          const deletePayload = { 
-            action: 'delete', 
-            id: id,
-            type: deletedRecord?.type, 
-            user: 'benjamintang0124@gmail.com'
-          };
-
-          fetch(cloudUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify(deletePayload)
-          }).then(() => {
-            console.log("Internal delete request sent, now pushing full state...");
-            performCloudSync(false, updated);
-          }).catch(e => {
-            console.error("Delete request failed", e);
-            performCloudSync(false, updated);
-          });
+          console.log("Record deleted locally, syncing remaining state to Excel...");
+          performCloudSync(false, updated);
         }
       }
     } else if (pin !== null) {
